@@ -1,10 +1,12 @@
 import express from "express";
 import { PrismaClient } from "@prisma/client";
 import { authenticateToken, AuthRequest } from "../middleware/auth";
+import crypto from "crypto";
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
+// Get balance
 router.get("/", authenticateToken, async (req: AuthRequest, res) => {
   try {
     const user = await prisma.user.findUnique({ where: { id: req.userId } });
@@ -15,6 +17,7 @@ router.get("/", authenticateToken, async (req: AuthRequest, res) => {
   }
 });
 
+// Deposit route
 router.post("/deposit", authenticateToken, async (req: AuthRequest, res) => {
   try {
     const amount = Number(req.body.amount);
@@ -28,12 +31,14 @@ router.post("/deposit", authenticateToken, async (req: AuthRequest, res) => {
       where: { id: req.userId },
       data: { balance: { increment: amount } },
     });
+
     res.json({ balance: updated.balance });
   } catch (error) {
     res.status(500).json({ message: "Server error" });
   }
 });
 
+// Withdraw route
 router.post("/withdraw", authenticateToken, async (req: AuthRequest, res) => {
   try {
     const amount = Number(req.body.amount);
@@ -50,40 +55,55 @@ router.post("/withdraw", authenticateToken, async (req: AuthRequest, res) => {
       where: { id: req.userId },
       data: { balance: { decrement: amount } },
     });
+
     res.json({ balance: updated.balance });
   } catch (error) {
     res.status(500).json({ message: "Server error" });
   }
 });
 
-// POST /api/wallet/create-invoice
+// ✅ Create invoice (NOWPayments)
 router.post("/create-invoice", authenticateToken, async (req: AuthRequest, res) => {
-  const { amount } = req.body;
+  const { amount, pay_currency } = req.body;
   const apiKey = process.env.NOWPAYMENTS_API_KEY;
 
-  const response = await fetch("https://api.nowpayments.io/v1/invoice", {
-    method: "POST",
-    headers: {
-      "x-api-key": apiKey!,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      price_amount: amount,
-      price_currency: "usd", // or "btc", etc.
-      pay_currency: "btc",
-      ipn_callback_url: "https://your-backend.com/api/wallet/ipn", // Add this route too
-      order_description: `Deposit for user ${req.userId}`,
-    }),
-  });
+  if (!amount || !pay_currency) {
+    return res.status(400).json({ message: "Missing amount or currency" });
+  }
 
-  const data = await response.json();
-  res.json(data);
+  try {
+    const response = await fetch("https://api.nowpayments.io/v1/invoice", {
+      method: "POST",
+      headers: {
+        "x-api-key": apiKey!,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        price_amount: amount,
+        price_currency: "usd",
+        pay_currency,
+        ipn_callback_url: "https://46.150.54.192:3000/api/wallet/ipn",
+        order_description: `Deposit for user ${req.userId}`,
+        is_fixed_rate: true,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.invoice_url) {
+      console.error("NOWPayments error:", data);
+      return res.status(500).json({ message: "Failed to create invoice", error: data });
+    }
+
+    res.json({ invoice_url: data.invoice_url });
+  } catch (err) {
+    console.error("Invoice creation error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
-// POST /api/wallet/ipn
-import crypto from "crypto";
-
-router.post("/ipn", async (req, res) => {
+// ✅ IPN handler
+router.post("/ipn", express.json(), async (req, res) => {
   const { payment_status, price_amount, order_description } = req.body;
   const hmacHeader = req.headers["x-nowpayments-sig"] as string;
   const secret = process.env.NOWPAYMENTS_API_KEY;
@@ -92,31 +112,43 @@ router.post("/ipn", async (req, res) => {
   const expectedSig = crypto.createHmac("sha512", secret!).update(payload).digest("hex");
 
   if (hmacHeader !== expectedSig) {
-    console.warn("Invalid signature on IPN");
+    console.warn("Invalid IPN signature");
     return res.sendStatus(403);
   }
 
-  console.log("IPN received:", req.body);
+  console.log("✅ Valid IPN received:", req.body);
 
   if (payment_status !== "finished") return res.sendStatus(200);
 
-  const userId = parseInt(order_description.split(" ")[3]);
+  const match = order_description?.match(/user (\d+)/);
+  const userId = match ? parseInt(match[1]) : null;
+  const amount = parseFloat(price_amount);
 
-  await prisma.transaction.create({
-    data: {
-      userId,
-      amount: price_amount,
-      type: "deposit",
-      status: "confirmed",
-    },
-  });
+  if (!userId || isNaN(amount)) {
+    console.error("Invalid IPN payload: userId or amount missing");
+    return res.sendStatus(400);
+  }
 
-  await prisma.user.update({
-    where: { id: userId },
-    data: { balance: { increment: price_amount } },
-  });
+  try {
+    await prisma.transaction.create({
+      data: {
+        userId,
+        amount,
+        type: "deposit",
+        status: "confirmed",
+      },
+    });
 
-  res.sendStatus(200);
+    await prisma.user.update({
+      where: { id: userId },
+      data: { balance: { increment: amount } },
+    });
+
+    res.sendStatus(200);
+  } catch (err) {
+    console.error("DB error handling IPN:", err);
+    res.sendStatus(500);
+  }
 });
 
 export default router;
