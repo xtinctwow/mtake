@@ -56,4 +56,43 @@ router.post("/withdraw", authenticateToken, async (req: AuthRequest, res) => {
   }
 });
 
+// POST /api/wallet/create-invoice
+router.post("/create-invoice", authenticateToken, async (req: AuthRequest, res) => {
+  const { amount } = req.body;
+  const apiKey = process.env.NOWPAYMENTS_API_KEY;
+
+  const response = await fetch("https://api.nowpayments.io/v1/invoice", {
+    method: "POST",
+    headers: {
+      "x-api-key": apiKey!,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      price_amount: amount,
+      price_currency: "usd", // or "btc", etc.
+      pay_currency: "btc",
+      ipn_callback_url: "https://your-backend.com/api/wallet/ipn", // Add this route too
+      order_description: `Deposit for user ${req.userId}`,
+    }),
+  });
+
+  const data = await response.json();
+  res.json(data);
+});
+
+// POST /api/wallet/ipn
+router.post("/ipn", async (req, res) => {
+  const { payment_status, price_amount, order_description } = req.body;
+  if (payment_status !== "finished") return res.sendStatus(200); // Only process finished
+
+  const userId = parseInt(order_description.split(" ")[3]); // crude parse
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { balance: { increment: price_amount } },
+  });
+
+  res.sendStatus(200);
+});
+
 export default router;
