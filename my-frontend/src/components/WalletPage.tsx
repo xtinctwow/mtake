@@ -2,7 +2,6 @@
 import { useAuth } from "../context/AuthContext";
 import { useState } from "react";
 
-export default function WalletPage({ balance, setBalance }: { balance: number; setBalance: (n: number) => void }) {
 export default function WalletPage({
   balance,
   setBalance,
@@ -83,17 +82,6 @@ export default function WalletPage({
         >
           {loading ? "Redirecting..." : "Deposit"}
         </button>
-      </div>
-
-      <div className="bg-gray-800 p-6 rounded max-w-md">
-        <h3 className="text-lg font-semibold mb-2">Transaction History</h3>
-        <p className="text-sm text-gray-400">Coming soon...</p>
-      </div>
-    </div>
-  );
-}
-          </button>
-        </div>
       </div>
 
       <div className="bg-gray-800 p-6 rounded max-w-md">
