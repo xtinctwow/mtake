@@ -24,7 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         price_amount: amount,
         price_currency: "usd",
         pay_currency,
-        ipn_callback_url: "https://46.150.54.192:5173/api/wallet/ipn",
+        ipn_callback_url: "https://46.150.54.192:3000/api/wallet/ipn",
         order_description: "Deposit to user wallet",
         is_fixed_rate: true,
       }),
