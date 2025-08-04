@@ -81,11 +81,35 @@ router.post("/create-invoice", authenticateToken, async (req: AuthRequest, res) 
 });
 
 // POST /api/wallet/ipn
+import crypto from "crypto";
+
 router.post("/ipn", async (req, res) => {
   const { payment_status, price_amount, order_description } = req.body;
-  if (payment_status !== "finished") return res.sendStatus(200); // Only process finished
+  const hmacHeader = req.headers["x-nowpayments-sig"] as string;
+  const secret = process.env.NOWPAYMENTS_API_KEY;
 
-  const userId = parseInt(order_description.split(" ")[3]); // crude parse
+  const payload = JSON.stringify(req.body);
+  const expectedSig = crypto.createHmac("sha512", secret!).update(payload).digest("hex");
+
+  if (hmacHeader !== expectedSig) {
+    console.warn("Invalid signature on IPN");
+    return res.sendStatus(403);
+  }
+
+  console.log("IPN received:", req.body);
+
+  if (payment_status !== "finished") return res.sendStatus(200);
+
+  const userId = parseInt(order_description.split(" ")[3]);
+
+  await prisma.transaction.create({
+    data: {
+      userId,
+      amount: price_amount,
+      type: "deposit",
+      status: "confirmed",
+    },
+  });
 
   await prisma.user.update({
     where: { id: userId },
