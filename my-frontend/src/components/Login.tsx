@@ -26,8 +26,8 @@ export default function Login() {
       const data = await res.json();
 
       if (res.ok) {
-        login(data.token); // ✅ store token in localStorage + update state
-        navigate("/");      // ✅ redirect to homepage
+        login(data.token, data.email);
+        navigate("/");
       } else {
         setMessage(data.message || "Login failed");
       }

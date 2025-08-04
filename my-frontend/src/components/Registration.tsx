@@ -26,8 +26,8 @@ export default function Registration() {
       const data = await res.json();
 
       if (res.ok) {
-        login(data.token); // ✅ store token + update state
-        navigate("/");      // ✅ redirect after register
+        login(data.token, data.email);
+        navigate("/");
       } else {
         setMessage(data.message || "Registration failed");
       }
