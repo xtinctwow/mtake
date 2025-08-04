@@ -8,21 +8,34 @@ datasource db {
 }
 
 model User {
-  id           Int           @id @default(autoincrement())
-  email        String        @unique
-  password     String
-  balance      Float         @default(0)
-
-
+  id        Int           @id @default(autoincrement())
+  email     String        @unique
+  password  String
+  balance   Float         @default(0)
+  btcWallet BtcWallet?    @relation(fields: [btcWalletId], references: [id])
+  btcWalletId Int?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
   transactions Transaction[]
 }
 
 model Transaction {
-  id        Int      @id @default(autoincrement())
-  user      User     @relation(fields: [userId], references: [id])
-  userId    Int
+  id        Int       @id @default(autoincrement())
   amount    Float
-  type      String   // "deposit" or "withdraw"
-  status    String   // "pending", "confirmed", "failed"
-  createdAt DateTime @default(now())
+  currency  String    // e.g. 'btc', 'eth', 'usdt'
+  type      String    // 'deposit' | 'withdraw'
+  status    String    // 'pending' | 'confirmed' | 'failed'
+  user      User      @relation(fields: [userId], references: [id])
+  userId    Int
+  createdAt DateTime  @default(now())
+}
+
+model BtcWallet {
+  id         Int      @id @default(autoincrement())
+  address    String   @unique
+  user       User     @relation
+  userId     Int      @unique
+  balance    Float    @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
