@@ -20,18 +20,15 @@ router.post("/register", async (req, res) => {
   if (existing) return res.status(400).json({ message: "User exists" });
 
   const hashed = await bcrypt.hash(password, 10);
-  const user = await prisma.user.create({ data: { email, password: hashed } });
-      const address = await generateCryptoAddress("btc", newUser.id);
+  // ✅ Generate BTC wallet address
+  const address = await generateCryptoAddress("btc", user.id);
 
-      await prisma.btcWallet.create({
-        data: {
-          userId: newUser.id,
-          address,
-        },
-      });
   await prisma.btcWallet.create({
     data: {
       userId: user.id,
+      address,
+    },
+  });
       address: generateBtcAddressSomehow(), // TODO: Replace with actual BTC address generator
     },
   });
