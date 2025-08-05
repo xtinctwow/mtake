@@ -12,6 +12,28 @@ export default function WalletPage({
 }) {
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("btc");
+
+  useEffect(() => {
+    const fetchBtcWallet = async () => {
+      try {
+        const res = await fetch("http://localhost:3000/api/wallet/btc", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setBalance(data.balance);
+          console.log("BTC Address:", data.address);
+        }
+      } catch (err) {
+        console.error("Failed to load BTC wallet", err);
+      }
+    };
+
+    fetchBtcWallet();
+  }, [token]);
   const [loading, setLoading] = useState(false);
   const { token } = useAuth();
 
