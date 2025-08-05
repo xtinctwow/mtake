@@ -1,3 +1,7 @@
+[⚠️ Suspicious Content] 
+Hey, did you just copy something?
+Heads up, your clipboard was just accessed from this website. Be sure you trust the owner before pasting this someplace you don’t want it. Like a terminal or an email to your boss.
+Disable this warning for this site
 import express from "express";
 import { PrismaClient } from "@prisma/client";
 import { authenticateToken, AuthRequest } from "../middleware/auth";
@@ -130,14 +134,15 @@ router.post("/ipn", express.json(), async (req, res) => {
   }
 
   try {
-    await prisma.transaction.create({
-      data: {
-        userId,
-        amount,
-        type: "deposit",
-        status: "confirmed",
-      },
-    });
+    const transaction = await prisma.transaction.create({
+	  data: {
+		userId: user.id,
+		amount,
+		type: "deposit",
+		status: "pending",
+		currency: "BTC",
+	  },
+	});
 
     await prisma.user.update({
       where: { id: userId },
