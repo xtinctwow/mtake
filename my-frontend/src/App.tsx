@@ -8,10 +8,13 @@ import GameCard from "./components/GameCard";
 import Registration from "./components/Registration";
 import Login from "./components/Login";
 import { useAuth } from "./context/AuthContext";
+import WalletModal from "./components/WalletModal";
+
 
 export default function App() {
   const [balance, setBalance] = useState(0.0);
   const { email, token } = useAuth(); // Use token for authentication check
+  const [showWallet, setShowWallet] = useState(false);
 
   const isAuthenticated = !!token;
 
@@ -20,7 +23,7 @@ export default function App() {
       <div className="flex bg-gray-900 text-white min-h-screen">
         <Sidebar />
         <div className="flex-1 flex flex-col">
-          <Topbar balance={balance.toFixed(8)} />
+          <Topbar balance={balance.toFixed(8)} onWalletClick={() => setShowWallet(true)} />
           <Routes>
             <Route
               path="/"
@@ -70,6 +73,7 @@ export default function App() {
           </Routes>
         </div>
       </div>
+	  {showWallet && <WalletModal onClose={() => setShowWallet(false)} />}
     </Router>
   );
 }

@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-export default function Topbar({ balance }: { balance: string }) {
+export default function Topbar({ balance, onWalletClick }: { balance: string; onWalletClick: () => void }) {
   const { isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -14,7 +14,9 @@ export default function Topbar({ balance }: { balance: string }) {
     <header className="flex justify-between items-center bg-gray-800 px-6 py-3 text-white">
       <div className="flex items-center space-x-4">
         <div className="font-mono bg-gray-700 rounded px-3 py-1">{balance} BTC</div>
-        <Link to="/wallet" className="bg-blue-600 hover:bg-blue-700 rounded px-4 py-1 text-white">Wallet</Link>
+        <button onClick={onWalletClick} className="bg-blue-600 hover:bg-blue-700 rounded px-4 py-1 text-white">
+  Wallet
+</button>
       </div>
 
       <div className="flex items-center space-x-4">
