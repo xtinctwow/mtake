@@ -6,6 +6,7 @@ import { PrismaClient } from "@prisma/client";
 import axios from "axios";
 import dotenv from "dotenv";
 dotenv.config();
+import { generateCryptoAddress } from "../utils/nowpayments";
 const router = express.Router();
 const prisma = new PrismaClient();
 
