@@ -12,10 +12,10 @@ model User {
   email        String        @unique
   password     String
   balance      Float         @default(0)
-  btcWallet    BtcWallet?    // brez @relation tukaj
+  btcWallet    BtcWallet?                                // Optional 1:1 relation
   createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  transactions Transaction[]
+  updatedAt    DateTime      @updatedAt @default(now())  // ✅ Required with default
+  transactions Transaction[]                             // 1:N relation to transactions
 }
 
 model Transaction {
@@ -32,9 +32,9 @@ model Transaction {
 model BtcWallet {
   id         Int      @id @default(autoincrement())
   address    String   @unique
-  user       User     @relation(fields: [userId], references: [id])  // <- pravilno
-  userId     Int      @unique                                        // <- 1:1
+  user       User     @relation(fields: [userId], references: [id])  // Required side of 1:1
+  userId     Int      @unique                                        // Enforces 1:1
   balance    Float    @default(0)
   createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  updatedAt  DateTime? @updatedAt
 }
