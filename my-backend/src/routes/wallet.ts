@@ -149,6 +149,21 @@ router.post("/ipn", express.json(), async (req, res) => {
 
     });
 
+
+// ✅ Get BTC wallet info
+router.get("/btc", authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const wallet = await prisma.btcWallet.findUnique({
+      where: { userId: req.userId },
+    });
+
+    if (!wallet) return res.status(404).json({ message: "BTC Wallet not found" });
+
+    res.json({ address: wallet.address, balance: wallet.balance });
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
     res.sendStatus(200);
   } catch (err) {
     console.error("DB error handling IPN:", err);
