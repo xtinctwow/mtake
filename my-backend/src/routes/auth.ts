@@ -3,6 +3,9 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { PrismaClient } from "@prisma/client";
 
+import axios from "axios";
+import dotenv from "dotenv";
+dotenv.config();
 const router = express.Router();
 const prisma = new PrismaClient();
 
