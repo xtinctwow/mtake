@@ -130,15 +130,15 @@ router.post("/ipn", express.json(), async (req, res) => {
   }
 
   try {
-    const transaction = await prisma.transaction.create({
-	  data: {
-		userId: userId,
-		amount,
-		type: "deposit",
-		status: "pending",
-		currency: "BTC",
-	  },
-	});
+    await prisma.transaction.create({
+      data: {
+        userId,
+        amount,
+        type: "deposit",
+        status: "pending",
+        currency: "BTC",
+      },
+    });
 
     await prisma.user.update({
       where: { id: userId },
@@ -150,8 +150,13 @@ router.post("/ipn", express.json(), async (req, res) => {
       data: { balance: { increment: amount } },
     });
 
+    res.sendStatus(200);
+  } catch (err) {
+    console.error("DB error handling IPN:", err);
+    res.sendStatus(500);
+  }
+});
 
-// ✅ Get BTC wallet info
 router.get("/btc", authenticateToken, async (req: AuthRequest, res) => {
   try {
     const wallet = await prisma.btcWallet.findUnique({
@@ -163,12 +168,6 @@ router.get("/btc", authenticateToken, async (req: AuthRequest, res) => {
     res.json({ address: wallet.address, balance: wallet.balance });
   } catch (error) {
     res.status(500).json({ message: "Server error" });
-  }
-});
-    res.sendStatus(200);
-  } catch (err) {
-    console.error("DB error handling IPN:", err);
-    res.sendStatus(500);
   }
 });
 
