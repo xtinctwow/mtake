@@ -12,6 +12,8 @@ export default function WalletPage({
 }) {
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("btc");
+  const { token } = useAuth(); // ⬅️ premaknjeno gor
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const fetchBtcWallet = async () => {
@@ -32,7 +34,7 @@ export default function WalletPage({
       }
     };
 
-    fetchBtcWallet();
+    if (token) fetchBtcWallet(); // ⬅️ dodatna zaščita pred klicem brez tokena
   }, [token]);
   const [loading, setLoading] = useState(false);
   const { token } = useAuth();

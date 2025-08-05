@@ -132,7 +132,7 @@ router.post("/ipn", express.json(), async (req, res) => {
   try {
     const transaction = await prisma.transaction.create({
 	  data: {
-		userId: user.id,
+		userId: userId,
 		amount,
 		type: "deposit",
 		status: "pending",
