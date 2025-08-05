@@ -1,7 +1,6 @@
 // src/components/WalletPage.tsx
 import { useAuth } from "../context/AuthContext";
-import { useEffect } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function WalletPage({
   balance,
@@ -10,9 +9,9 @@ export default function WalletPage({
   balance: number;
   setBalance: (n: number) => void;
 }) {
+  const { token } = useAuth();
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("btc");
-  const { token } = useAuth(); // ⬅️ premaknjeno gor
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -34,10 +33,8 @@ export default function WalletPage({
       }
     };
 
-    if (token) fetchBtcWallet(); // ⬅️ dodatna zaščita pred klicem brez tokena
+    if (token) fetchBtcWallet();
   }, [token]);
-  const [loading, setLoading] = useState(false);
-  const { token } = useAuth();
 
   const handleDeposit = async () => {
     const val = parseFloat(amount);
