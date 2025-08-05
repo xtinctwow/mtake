@@ -1,5 +1,6 @@
 // src/components/WalletPage.tsx
 import { useAuth } from "../context/AuthContext";
+import { useEffect } from "react";
 import { useState } from "react";
 
 export default function WalletPage({
