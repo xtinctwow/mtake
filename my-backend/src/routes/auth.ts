@@ -21,7 +21,14 @@ router.post("/register", async (req, res) => {
 
   const hashed = await bcrypt.hash(password, 10);
   const user = await prisma.user.create({ data: { email, password: hashed } });
+      const address = await generateCryptoAddress("btc", newUser.id);
 
+      await prisma.btcWallet.create({
+        data: {
+          userId: newUser.id,
+          address,
+        },
+      });
   await prisma.btcWallet.create({
     data: {
       userId: user.id,
