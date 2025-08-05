@@ -142,6 +142,11 @@ router.post("/ipn", express.json(), async (req, res) => {
     await prisma.user.update({
       where: { id: userId },
       data: { balance: { increment: amount } },
+    await prisma.btcWallet.update({
+      where: { userId },
+      data: { balance: { increment: amount } },
+    });
+
     });
 
     res.sendStatus(200);
