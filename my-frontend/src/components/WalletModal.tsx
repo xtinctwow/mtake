@@ -86,6 +86,55 @@ export default function WalletModal({ onClose }: { onClose: () => void }) {
           <button
             onClick={() => setTab("buy")}
             className={`px-3 py-1 rounded ${tab === "buy" ? "bg-gray-800 text-white" : "text-gray-400 hover:text-white"}`}
+
+        {tab === "deposit" && (
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm text-gray-400">Currency</p>
+              <select
+                value={selectedCurrency}
+                onChange={(e) => setSelectedCurrency(e.target.value)}
+                className="w-full p-2 rounded bg-gray-800 text-white"
+              >
+                <option value="btc">BTC (Bitcoin)</option>
+                <option value="sol" disabled>SOL (Solana)</option>
+              </select>
+            </div>
+
+            <div>
+              <p className="text-sm text-gray-400">Address</p>
+              <div className="flex items-center space-x-2 bg-gray-800 rounded px-3 py-2">
+                <span className="truncate">{btcAddress || "Loading..."}</span>
+                <button
+                  onClick={() => navigator.clipboard.writeText(btcAddress)}
+                  className="text-sm text-blue-400 hover:underline"
+                >
+                  Copy
+                </button>
+              </div>
+            </div>
+
+            {btcAddress && (
+              <div className="flex justify-center">
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${btcAddress}`}
+                  alt="QR Code"
+                  className="border border-gray-700 rounded"
+                />
+              </div>
+            )}
+
+            <div className="text-center text-gray-400 text-sm">
+              <p>Or deposit directly from your wallet</p>
+              <div className="flex justify-center space-x-2 mt-2">
+                <span>🦊</span>
+                <span>🌐</span>
+                <span>🔵</span>
+              </div>
+              <p className="mt-2">Credited after 1 confirmation</p>
+            </div>
+          </div>
+        )
           >
             Buy Crypto
           </button>
