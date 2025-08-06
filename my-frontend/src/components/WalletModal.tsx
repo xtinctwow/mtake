@@ -7,34 +7,51 @@ export default function WalletModal({ onClose }: { onClose: () => void }) {
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("btc");
   const [loading, setLoading] = useState(false);
-  const [tab, setTab] = useState<"overview" | "buy" | "settings">("overview");
+  const [tab, setTab] = useState<"overview" | "deposit" | "buy" | "settings">("overview");
   const modalRef = useRef<HTMLDivElement>(null);
 
+  const [selectedCurrency, setSelectedCurrency] = useState("btc");
+  const [btcAddress, setBtcAddress] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [solAddress, setSolAddress] = useState("");
+
   useEffect(() => {
-    const fetchWallet = async () => {
-      const res = await fetch("http://46.150.54.192:3000/api/wallet/btc", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setBalance(data.balance);
+	  const fetchWallet = async () => {
+		// BTC
+		const btcRes = await fetch("http://46.150.54.192:3000/api/wallet/btc", {
+		  headers: { Authorization: `Bearer ${token}` },
+		});
+		if (btcRes.ok) {
+		  const data = await btcRes.json();
+		  setBalance(data.balance); // ali shraniš posebej balance za BTC in SOL
+		  if (data.address) setBtcAddress(data.address);
+		}
+
+		// SOL
+		const solRes = await fetch("http://46.150.54.192:3000/api/wallet/sol", {
+		  headers: { Authorization: `Bearer ${token}` },
+		});
+		if (solRes.ok) {
+		  const data = await solRes.json();
+		  if (data.address) setSolAddress(data.address);
+		}
+	  };
+
+	  if (token) fetchWallet();
+	}, [token]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+        onClose();
       }
     };
-    if (token) fetchWallet();
-  }, [token]);
-  
-  useEffect(() => {
-  const handleClickOutside = (event: MouseEvent) => {
-    if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
-      onClose();
-    }
-  };
 
-  document.addEventListener("mousedown", handleClickOutside);
-  return () => {
-    document.removeEventListener("mousedown", handleClickOutside);
-  };
-}, [onClose]);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [onClose]);
 
   const handleDeposit = async () => {
     const val = parseFloat(amount);
@@ -58,13 +75,18 @@ export default function WalletModal({ onClose }: { onClose: () => void }) {
       }
     } catch (err) {
       console.error("Error creating invoice", err);
+      alert("An error occurred while creating the invoice.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300 ease-out animate-fade-in">
-      <div ref={modalRef} className="bg-gray-900 rounded-lg p-6 w-full max-w-md text-white relative transform transition-all duration-300 scale-100">
+      <div
+        ref={modalRef}
+        className="bg-gray-900 rounded-lg p-6 w-full max-w-md text-white relative transform transition-all duration-300 scale-100"
+      >
         <button
           onClick={onClose}
           className="absolute top-2 right-2 text-gray-400 hover:text-white text-xl"
@@ -72,14 +94,19 @@ export default function WalletModal({ onClose }: { onClose: () => void }) {
           ×
         </button>
 
-        <h2 className="text-2xl font-semibold mb-4">Wallet</h2>
-
+        {/* Gumbi za zavihke */}
         <div className="flex space-x-4 mb-6 border-b border-gray-700 pb-2">
           <button
             onClick={() => setTab("overview")}
             className={`px-3 py-1 rounded ${tab === "overview" ? "bg-gray-800 text-white" : "text-gray-400 hover:text-white"}`}
           >
             Overview
+          </button>
+          <button
+            onClick={() => setTab("deposit")}
+            className={`px-3 py-1 rounded ${tab === "deposit" ? "bg-gray-800 text-white" : "text-gray-400 hover:text-white"}`}
+          >
+            Deposit
           </button>
           <button
             onClick={() => setTab("buy")}
@@ -95,53 +122,163 @@ export default function WalletModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
+        {/* Overview tab */}
         {tab === "overview" && (
           <>
-            <div className="mb-4">
-              <p className="text-sm text-gray-400">Balance</p>
-              <div className="text-xl font-mono">{balance.toFixed(8)} BTC</div>
-            </div>
-
             <div className="mb-6">
-              <input
-                type="number"
-                placeholder="Amount in USD"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="w-full p-2 rounded bg-gray-800 text-white mb-2"
-              />
-              <select
-                value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
-                className="w-full p-2 rounded bg-gray-800 text-white"
-              >
-                <option value="btc">BTC</option>
-                <option value="eth">ETH</option>
-                <option value="sol">SOL</option>
-                <option value="usdc">USDC</option>
-                <option value="bnb">BNB</option>
-              </select>
+              <p className="text-sm text-gray-400">Balance</p>
+              <div className="text-3xl font-bold text-white">
+                ${(balance * 68000).toFixed(2)} <span className="text-green-400">USD</span>
+              </div>
             </div>
 
-            <div className="flex gap-4">
-              <button className="w-full bg-gray-700 hover:bg-gray-600 py-2 rounded">Withdraw</button>
+            <div className="bg-gray-800 rounded p-4 mb-6">
+              <table className="w-full text-left text-sm">
+                <thead className="text-gray-400">
+                  <tr>
+                    <th className="pb-2">Currency</th>
+                    <th className="pb-2 text-right">Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-t border-gray-700 py-2">
+                    <td className="py-2 flex items-center gap-2">
+                      <span className="text-xl"><img src="https://s2.coinmarketcap.com/static/img/coins/32x32/1.png"/></span>
+                      <div>
+                        <div className="font-semibold">BTC</div>
+                        <div className="text-gray-400 text-xs">Bitcoin</div>
+                      </div>
+                    </td>
+                    <td className="py-2 text-right">
+                      <div className="font-mono">{balance.toFixed(8)}</div>
+                      <div className="text-gray-400 text-xs">
+                        ${(balance * 68000).toFixed(2)} USD
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex gap-4 mb-4">
+              <button className="w-full bg-gray-700 hover:bg-gray-600 py-2 rounded">
+                Withdraw
+              </button>
               <button
-                onClick={handleDeposit}
-                disabled={loading}
+                onClick={() => setTab("deposit")}
                 className="w-full bg-green-600 hover:bg-green-500 py-2 rounded"
               >
-                {loading ? "Redirecting..." : "Deposit"}
+                Deposit
               </button>
             </div>
+
+            <div className="text-center text-sm text-gray-400 mb-2">
+              Improve your account security with Two-Factor Authentication
+            </div>
+            <button className="w-full bg-gray-700 hover:bg-gray-600 py-2 rounded">
+              Enable 2FA
+            </button>
           </>
         )}
 
+        {/* Deposit */}
+        {tab === "deposit" && (
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm text-gray-400">Currency</p>
+              <select
+				  value={selectedCurrency}
+				  onChange={(e) => setSelectedCurrency(e.target.value)}
+				  className="w-full p-2 rounded bg-gray-800 text-white"
+				>
+				  <option value="btc">BTC (Bitcoin)</option>
+				  <option value="sol">SOL (Solana)</option>
+				</select>
+            </div>
+
+            <div>
+  <p className="text-sm text-gray-400">Address</p>
+  <div className="flex items-center space-x-2 bg-gray-800 rounded px-3 py-2">
+    <span className="truncate">
+  {selectedCurrency === "btc"
+    ? btcAddress || "Loading..."
+    : solAddress || "Loading..."}
+</span>
+    <button
+      onClick={() => {
+        let address = "N/A";
+		if (selectedCurrency === "btc") address = btcAddress;
+		else if (selectedCurrency === "sol") address = solAddress;
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard.writeText(address).then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          });
+        } else {
+          const textArea = document.createElement("textarea");
+          textArea.value = address;
+          textArea.style.position = "fixed";
+          document.body.appendChild(textArea);
+          textArea.focus();
+          textArea.select();
+          try {
+            document.execCommand("copy");
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          } catch (err) {
+            console.error("Copy fallback failed", err);
+            alert("Could not copy address");
+          }
+          document.body.removeChild(textArea);
+        }
+      }}
+      className="text-sm text-blue-400 hover:underline"
+    >
+      {copied ? "Copied!" : "Copy"}
+    </button>
+  </div>
+</div>
+
+						{selectedCurrency === "btc" && btcAddress && (
+			  <div className="flex justify-center">
+				<img
+				  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${btcAddress}`}
+				  alt="BTC QR Code"
+				  className="border border-gray-700 rounded"
+				/>
+			  </div>
+			)}
+
+			{selectedCurrency === "sol" && solAddress && (
+			  <div className="flex justify-center">
+				<img
+				  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${solAddress}`}
+				  alt="SOL QR Code"
+				  className="border border-gray-700 rounded"
+				/>
+			  </div>
+			)}
+
+            <div className="text-center text-gray-400 text-sm">
+              <p>Or deposit directly from your wallet</p>
+              <div className="flex justify-center space-x-2 mt-2">
+                <span>🦊</span>
+                <span>🌐</span>
+                <span>🔵</span>
+              </div>
+              <p className="mt-2">Credited after 1 confirmation</p>
+            </div>
+          </div>
+        )}
+
+        {/* Buy */}
         {tab === "buy" && (
           <div className="text-gray-400 text-sm">
             <p>Feature coming soon: Buy crypto directly inside the wallet!</p>
           </div>
         )}
 
+        {/* Settings */}
         {tab === "settings" && (
           <div className="text-gray-400 text-sm">
             <p>2FA, notifications and account limits coming soon...</p>
