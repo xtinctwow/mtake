@@ -15,6 +15,8 @@ export default function WalletModal({ onClose }: { onClose: () => void }) {
       const res = await fetch("http://46.150.54.192:3000/api/wallet/btc", {
         headers: { Authorization: `Bearer ${token}` },
       });
+  const [selectedCurrency, setSelectedCurrency] = useState("btc");
+  const [btcAddress, setBtcAddress] = useState("");
       if (res.ok) {
         const data = await res.json();
         setBalance(data.balance);
