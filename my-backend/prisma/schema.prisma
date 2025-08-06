@@ -12,29 +12,37 @@ model User {
   email        String        @unique
   password     String
   balance      Float         @default(0)
-  btcWallet    BtcWallet?                                // Optional 1:1 relation
+  btcWallet    BtcWallet? // ✅ obstoječa relacija
+  solWallet    SolWallet? // ✅ dodaj to vrstico
   createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt @default(now())  // ✅ Required with default
-  transactions Transaction[]                             // 1:N relation to transactions
+  updatedAt    DateTime      @default(now()) @updatedAt
+  transactions Transaction[]
 }
 
 model Transaction {
-  id        Int       @id @default(autoincrement())
+  id        Int      @id @default(autoincrement())
   amount    Float
-  currency  String    // e.g. 'btc', 'eth', 'usdt'
-  type      String    // 'deposit' | 'withdraw'
-  status    String    // 'pending' | 'confirmed' | 'failed'
-  user      User      @relation(fields: [userId], references: [id])
+  currency  String // e.g. 'btc', 'eth', 'usdt'
+  type      String // 'deposit' | 'withdraw'
+  status    String // 'pending' | 'confirmed' | 'failed'
+  user      User     @relation(fields: [userId], references: [id])
   userId    Int
-  createdAt DateTime  @default(now())
+  createdAt DateTime @default(now())
 }
 
 model BtcWallet {
-  id         Int      @id @default(autoincrement())
-  address    String   @unique
-  user       User     @relation(fields: [userId], references: [id])  // Required side of 1:1
-  userId     Int      @unique                                        // Enforces 1:1
-  balance    Float    @default(0)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime? @updatedAt
+  id        Int       @id @default(autoincrement())
+  address   String    @unique
+  user      User      @relation(fields: [userId], references: [id]) // Required side of 1:1
+  userId    Int       @unique // Enforces 1:1
+  balance   Float     @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+}
+
+model SolWallet {
+  userId  Int    @id
+  user    User   @relation(fields: [userId], references: [id])
+  address String
+  balance Float  @default(0)
 }

@@ -13,20 +13,32 @@ export default function WalletModal({ onClose }: { onClose: () => void }) {
   const [selectedCurrency, setSelectedCurrency] = useState("btc");
   const [btcAddress, setBtcAddress] = useState("");
   const [copied, setCopied] = useState(false);
+  const [solAddress, setSolAddress] = useState("");
 
   useEffect(() => {
-    const fetchWallet = async () => {
-      const res = await fetch("http://46.150.54.192:3000/api/wallet/btc", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setBalance(data.balance);
-        if (data.address) setBtcAddress(data.address);
-      }
-    };
-    if (token) fetchWallet();
-  }, [token]);
+	  const fetchWallet = async () => {
+		// BTC
+		const btcRes = await fetch("http://46.150.54.192:3000/api/wallet/btc", {
+		  headers: { Authorization: `Bearer ${token}` },
+		});
+		if (btcRes.ok) {
+		  const data = await btcRes.json();
+		  setBalance(data.balance); // ali shraniš posebej balance za BTC in SOL
+		  if (data.address) setBtcAddress(data.address);
+		}
+
+		// SOL
+		const solRes = await fetch("http://46.150.54.192:3000/api/wallet/sol", {
+		  headers: { Authorization: `Bearer ${token}` },
+		});
+		if (solRes.ok) {
+		  const data = await solRes.json();
+		  if (data.address) setSolAddress(data.address);
+		}
+	  };
+
+	  if (token) fetchWallet();
+	}, [token]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -175,22 +187,28 @@ export default function WalletModal({ onClose }: { onClose: () => void }) {
             <div>
               <p className="text-sm text-gray-400">Currency</p>
               <select
-                value={selectedCurrency}
-                onChange={(e) => setSelectedCurrency(e.target.value)}
-                className="w-full p-2 rounded bg-gray-800 text-white"
-              >
-                <option value="btc">BTC (Bitcoin)</option>
-                <option value="sol" disabled>SOL (Solana)</option>
-              </select>
+				  value={selectedCurrency}
+				  onChange={(e) => setSelectedCurrency(e.target.value)}
+				  className="w-full p-2 rounded bg-gray-800 text-white"
+				>
+				  <option value="btc">BTC (Bitcoin)</option>
+				  <option value="sol">SOL (Solana)</option>
+				</select>
             </div>
 
             <div>
   <p className="text-sm text-gray-400">Address</p>
   <div className="flex items-center space-x-2 bg-gray-800 rounded px-3 py-2">
-    <span className="truncate">{selectedCurrency === "btc" ? btcAddress || "Loading..." : "Coming soon..."}</span>
+    <span className="truncate">
+  {selectedCurrency === "btc"
+    ? btcAddress || "Loading..."
+    : solAddress || "Loading..."}
+</span>
     <button
       onClick={() => {
-        const address = selectedCurrency === "btc" ? btcAddress : "Coming soon...";
+        let address = "N/A";
+		if (selectedCurrency === "btc") address = btcAddress;
+		else if (selectedCurrency === "sol") address = solAddress;
         if (navigator.clipboard && window.isSecureContext) {
           navigator.clipboard.writeText(address).then(() => {
             setCopied(true);

@@ -171,4 +171,36 @@ router.get("/btc", authenticateToken, async (req: AuthRequest, res) => {
   }
 });
 
+router.get("/sol", authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.userId;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    // 1. Preveri, če že obstaja SOL wallet
+    let wallet = await prisma.solWallet.findUnique({
+      where: { userId },
+    });
+
+    // 2. Če ne obstaja => ustvari novega
+    if (!wallet) {
+      const generatedAddress = `solana_${userId}_${Date.now()}`;
+
+      wallet = await prisma.solWallet.create({
+        data: {
+          userId,
+          address: generatedAddress,
+          balance: 0,
+        },
+      });
+    }
+
+    res.json({ address: wallet.address, balance: wallet.balance });
+  } catch (error) {
+    console.error("Error fetching SOL wallet:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+
 export default router;
