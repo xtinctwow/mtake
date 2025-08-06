@@ -12,6 +12,7 @@ export default function WalletModal({ onClose }: { onClose: () => void }) {
 
   const [selectedCurrency, setSelectedCurrency] = useState("btc");
   const [btcAddress, setBtcAddress] = useState("");
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const fetchWallet = async () => {
@@ -184,54 +185,41 @@ export default function WalletModal({ onClose }: { onClose: () => void }) {
             </div>
 
             <div>
-              <p className="text-sm text-gray-400">Address</p>
-              <div className="flex items-center space-x-2 bg-gray-800 rounded px-3 py-2">
-                <span className="truncate">{selectedCurrency === "btc" ? btcAddress || "Loading..." : "Coming soon..."}</span>
-                <button
-                  onClick={() => {
-  const address = selectedCurrency === "btc" ? btcAddress : "Coming soon...";
-                <button
-                  onClick={() => {
-                    const address = selectedCurrency === "btc" ? btcAddress : "Coming soon...";
-                    if (navigator.clipboard) {
-                      navigator.clipboard.writeText(address).then(() => {
-                        setCopied(true);
-                        setTimeout(() => setCopied(false), 2000);
-                      }).catch(() => alert("Failed to copy"));
-                    } else {
-                      const textarea = document.createElement("textarea");
-                      textarea.value = address;
-                      textarea.setAttribute("readonly", "");
-                      textarea.style.position = "absolute";
-                      textarea.style.left = "-9999px";
-                      document.body.appendChild(textarea);
-                      textarea.select();
-                      try {
-                        document.execCommand("copy");
-                        setCopied(true);
-                        setTimeout(() => setCopied(false), 2000);
-                      } catch (err) {
-                        alert("Failed to copy");
-                      }
-                      document.body.removeChild(textarea);
-                    }
-                  }}
-                  className="text-sm text-blue-400 hover:underline"
-                >
-                  {copied ? "Copied!" : "Copy"}
-                </button>
-  } catch (err) {
-    console.error("Copy fallback failed", err);
-    alert("Could not copy address");
-  }
-  document.body.removeChild(textarea);
-}}
-                  className="text-sm text-blue-400 hover:underline"
-                >
-                  Copy
-                </button>
-              </div>
-            </div>
+  <p className="text-sm text-gray-400">Address</p>
+  <div className="flex items-center space-x-2 bg-gray-800 rounded px-3 py-2">
+    <span className="truncate">{selectedCurrency === "btc" ? btcAddress || "Loading..." : "Coming soon..."}</span>
+    <button
+      onClick={() => {
+        const address = selectedCurrency === "btc" ? btcAddress : "Coming soon...";
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard.writeText(address).then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          });
+        } else {
+          const textArea = document.createElement("textarea");
+          textArea.value = address;
+          textArea.style.position = "fixed";
+          document.body.appendChild(textArea);
+          textArea.focus();
+          textArea.select();
+          try {
+            document.execCommand("copy");
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          } catch (err) {
+            console.error("Copy fallback failed", err);
+            alert("Could not copy address");
+          }
+          document.body.removeChild(textArea);
+        }
+      }}
+      className="text-sm text-blue-400 hover:underline"
+    >
+      {copied ? "Copied!" : "Copy"}
+    </button>
+  </div>
+</div>
 
             {selectedCurrency === "btc" && btcAddress && (
               <div className="flex justify-center">
