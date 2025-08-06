@@ -216,6 +216,21 @@ router.get("/sol", authenticateToken, async (req: AuthRequest, res) => {
   }
 });
 
+router.get("/prices", async (req, res) => {
+  try {
+    const prices = await prisma.price.findMany({
+      where: { symbol: { in: ["BTC", "SOL"] } },
+    });
 
+    const result: Record<string, number> = {};
+    for (const price of prices) {
+      result[price.symbol] = price.usdPrice;
+    }
+
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ message: "Error fetching prices" });
+  }
+});
 
 export default router;
