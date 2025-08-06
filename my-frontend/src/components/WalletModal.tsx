@@ -69,12 +69,14 @@ export default function WalletModal({ onClose }: { onClose: () => void }) {
           >
             Deposit
           </button>
+
           <button
             onClick={() => setTab("buy")}
             className={`px-3 py-1 rounded ${tab === "buy" ? "bg-gray-800 text-white" : "text-gray-400 hover:text-white"}`}
           >
             Buy Crypto
           </button>
+
           <button
             onClick={() => setTab("settings")}
             className={`px-3 py-1 rounded ${tab === "settings" ? "bg-gray-800 text-white" : "text-gray-400 hover:text-white"}`}
