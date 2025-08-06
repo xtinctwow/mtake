@@ -189,9 +189,21 @@ export default function WalletModal({ onClose }: { onClose: () => void }) {
                 <span className="truncate">{selectedCurrency === "btc" ? btcAddress || "Loading..." : "Coming soon..."}</span>
                 <button
                   onClick={() => {
-                    const address = selectedCurrency === "btc" ? btcAddress : "Coming soon...";
-                    navigator.clipboard.writeText(address);
-                  }}
+  const address = selectedCurrency === "btc" ? btcAddress : "Coming soon...";
+  
+  const textarea = document.createElement("textarea");
+  textarea.value = address;
+  document.body.appendChild(textarea);
+  textarea.select();
+  try {
+    document.execCommand("copy");
+    alert("Address copied!");
+  } catch (err) {
+    console.error("Copy fallback failed", err);
+    alert("Could not copy address");
+  }
+  document.body.removeChild(textarea);
+}}
                   className="text-sm text-blue-400 hover:underline"
                 >
                   Copy
