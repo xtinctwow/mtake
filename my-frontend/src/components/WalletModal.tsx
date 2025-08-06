@@ -97,33 +97,38 @@ export default function WalletModal({ onClose }: { onClose: () => void }) {
 
         {tab === "overview" && (
           <>
-            <div className="mb-4">
-              <p className="text-sm text-gray-400">Balance</p>
-              <div className="text-xl font-mono">{balance.toFixed(8)} BTC</div>
-            </div>
-
             <div className="mb-6">
-              <input
-                type="number"
-                placeholder="Amount in USD"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="w-full p-2 rounded bg-gray-800 text-white mb-2"
-              />
-              <select
-                value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
-                className="w-full p-2 rounded bg-gray-800 text-white"
-              >
-                <option value="btc">BTC</option>
-                <option value="eth">ETH</option>
-                <option value="sol">SOL</option>
-                <option value="usdc">USDC</option>
-                <option value="bnb">BNB</option>
-              </select>
+              <p className="text-sm text-gray-400">Balance</p>
+              <div className="text-3xl font-bold text-white">${(balance * 68000).toFixed(2)} <span className="text-green-400">$</span></div>
             </div>
 
-            <div className="flex gap-4">
+            <div className="bg-gray-800 rounded p-4 mb-6">
+              <table className="w-full text-left text-sm">
+                <thead className="text-gray-400">
+                  <tr>
+                    <th className="pb-2">Currency</th>
+                    <th className="pb-2 text-right">Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-t border-gray-700 py-2">
+                    <td className="py-2 flex items-center gap-2">
+                      <span className="text-xl">🪙</span>
+                      <div>
+                        <div className="font-semibold">BTC</div>
+                        <div className="text-gray-400 text-xs">Bitcoin</div>
+                      </div>
+                    </td>
+                    <td className="py-2 text-right">
+                      <div className="font-mono">{balance.toFixed(8)}</div>
+                      <div className="text-gray-400 text-xs">${(balance * 68000).toFixed(2)} USD</div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex gap-4 mb-4">
               <button className="w-full bg-gray-700 hover:bg-gray-600 py-2 rounded">Withdraw</button>
               <button
                 onClick={handleDeposit}
@@ -133,6 +138,11 @@ export default function WalletModal({ onClose }: { onClose: () => void }) {
                 {loading ? "Redirecting..." : "Deposit"}
               </button>
             </div>
+
+            <div className="text-center text-sm text-gray-400 mb-2">
+              Improve your account security with Two-Factor Authentication
+            </div>
+            <button className="w-full bg-gray-700 hover:bg-gray-600 py-2 rounded">Enable 2FA</button>
           </>
         )}
 
