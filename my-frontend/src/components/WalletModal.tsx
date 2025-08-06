@@ -1,5 +1,3 @@
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://46.150.54.192:3000";
-
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 
@@ -16,31 +14,55 @@ export default function WalletModal({ onClose }: { onClose: () => void }) {
   const [btcAddress, setBtcAddress] = useState("");
   const [copied, setCopied] = useState(false);
   const [solAddress, setSolAddress] = useState("");
+  
+  const [btcBalance, setBtcBalance] = useState(0);
+  const [solBalance, setSolBalance] = useState(0);
+  
+  const api = import.meta.env.VITE_API_URL;
+  
+  const [btcPrice, setBtcPrice] = useState(68000);
+  const [solPrice, setSolPrice] = useState(150);
+  
+  const totalValue = btcBalance * btcPrice + solBalance * solPrice;
 
   useEffect(() => {
-	  const fetchWallet = async () => {
-		// BTC
-		const btcRes = await fetch("http://46.150.54.192:3000/api/wallet/btc", {
-		  headers: { Authorization: `Bearer ${token}` },
-		});
-		if (btcRes.ok) {
-		  const data = await btcRes.json();
-		  setBalance(data.balance); // ali shraniš posebej balance za BTC in SOL
-		  if (data.address) setBtcAddress(data.address);
-		}
+  const fetchWallet = async () => {
+    // BTC
+    const btcRes = await fetch(`${api}/api/wallet/btc`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (btcRes.ok) {
+      const data = await btcRes.json();
+      setBtcBalance(data.balance);
+      if (data.address) setBtcAddress(data.address);
+    }
 
-		// SOL
-		const solRes = await fetch("http://46.150.54.192:3000/api/wallet/sol", {
-		  headers: { Authorization: `Bearer ${token}` },
-		});
-		if (solRes.ok) {
-		  const data = await solRes.json();
-		  if (data.address) setSolAddress(data.address);
-		}
-	  };
+    // SOL
+    const solRes = await fetch(`${api}/api/wallet/sol`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (solRes.ok) {
+      const data = await solRes.json();
+      setSolBalance(data.balance);
+      if (data.address) setSolAddress(data.address);
+    }
+  };
 
-	  if (token) fetchWallet();
-	}, [token]);
+  if (token) fetchWallet();
+}, [token]);
+
+useEffect(() => {
+  const fetchPrices = async () => {
+    const res = await fetch(`${api}/api/wallet/prices`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.BTC) setBtcPrice(data.BTC);
+      if (data.SOL) setSolPrice(data.SOL);
+    }
+  };
+
+  fetchPrices();
+}, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -61,7 +83,7 @@ export default function WalletModal({ onClose }: { onClose: () => void }) {
 
     setLoading(true);
     try {
-      const res = await fetch("http://46.150.54.192:3000/api/wallet/create-invoice", {
+      const res = await fetch(`${api}/api/wallet/create-invoice`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -125,63 +147,93 @@ export default function WalletModal({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Overview tab */}
-        {tab === "overview" && (
-          <>
-            <div className="mb-6">
-              <p className="text-sm text-gray-400">Balance</p>
-              <div className="text-3xl font-bold text-white">
-                ${(balance * 68000).toFixed(2)} <span className="text-green-400">USD</span>
-              </div>
-            </div>
+		{tab === "overview" && (
+		  <>
+			<div className="mb-6">
+			  <p className="text-sm text-gray-400">Balance</p>
+			  <div className="text-3xl font-bold text-white">
+				${totalValue.toFixed(2)} <span className="text-green-400">USDT</span>
+			  </div>
+			</div>
 
-            <div className="bg-gray-800 rounded p-4 mb-6">
-              <table className="w-full text-left text-sm">
-                <thead className="text-gray-400">
-                  <tr>
-                    <th className="pb-2">Currency</th>
-                    <th className="pb-2 text-right">Value</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="border-t border-gray-700 py-2">
-                    <td className="py-2 flex items-center gap-2">
-                      <span className="text-xl"><img src="https://s2.coinmarketcap.com/static/img/coins/32x32/1.png"/></span>
-                      <div>
-                        <div className="font-semibold">BTC</div>
-                        <div className="text-gray-400 text-xs">Bitcoin</div>
-                      </div>
-                    </td>
-                    <td className="py-2 text-right">
-                      <div className="font-mono">{balance.toFixed(8)}</div>
-                      <div className="text-gray-400 text-xs">
-                        ${(balance * 68000).toFixed(2)} USD
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+			<div className="bg-gray-800 rounded p-4 mb-6">
+			  <table className="w-full text-left text-sm">
+				<thead className="text-gray-400">
+				  <tr>
+					<th className="pb-2">Currency</th>
+					<th className="pb-2 text-right">Value</th>
+				  </tr>
+				</thead>
+				<tbody>
+				  {btcBalance > 0 && (
+					<tr className="border-t border-gray-700 py-2">
+					  <td className="py-2 flex items-center gap-2">
+						<span className="text-xl">
+						  <img
+							src="https://s2.coinmarketcap.com/static/img/coins/32x32/1.png"
+							alt="BTC"
+						  />
+						</span>
+						<div>
+						  <div className="font-semibold">BTC</div>
+						  <div className="text-gray-400 text-xs">Bitcoin</div>
+						</div>
+					  </td>
+					  <td className="py-2 text-right">
+						<div className="font-mono">{btcBalance.toFixed(8)}</div>
+						<div className="text-gray-400 text-xs">
+						  ${(btcBalance * btcPrice).toFixed(2)} USDT
+						</div>
+					  </td>
+					</tr>
+				  )}
 
-            <div className="flex gap-4 mb-4">
-              <button className="w-full bg-gray-700 hover:bg-gray-600 py-2 rounded">
-                Withdraw
-              </button>
-              <button
-                onClick={() => setTab("deposit")}
-                className="w-full bg-green-600 hover:bg-green-500 py-2 rounded"
-              >
-                Deposit
-              </button>
-            </div>
+				  {solBalance > 0 && (
+					<tr className="border-t border-gray-700 py-2">
+					  <td className="py-2 flex items-center gap-2">
+						<span className="text-xl">
+						  <img
+							src="https://s2.coinmarketcap.com/static/img/coins/32x32/5426.png"
+							alt="SOL"
+						  />
+						</span>
+						<div>
+						  <div className="font-semibold">SOL</div>
+						  <div className="text-gray-400 text-xs">Solana</div>
+						</div>
+					  </td>
+					  <td className="py-2 text-right">
+						<div className="font-mono">{solBalance.toFixed(8)}</div>
+						<div className="text-gray-400 text-xs">
+						  ${(solBalance * solPrice).toFixed(2)} USDT
+						</div>
+					  </td>
+					</tr>
+				  )}
+				</tbody>
+			  </table>
+			</div>
 
-            <div className="text-center text-sm text-gray-400 mb-2">
-              Improve your account security with Two-Factor Authentication
-            </div>
-            <button className="w-full bg-gray-700 hover:bg-gray-600 py-2 rounded">
-              Enable 2FA
-            </button>
-          </>
-        )}
+			<div className="flex gap-4 mb-4">
+			  <button className="w-full bg-gray-700 hover:bg-gray-600 py-2 rounded">
+				Withdraw
+			  </button>
+			  <button
+				onClick={() => setTab("deposit")}
+				className="w-full bg-green-600 hover:bg-green-500 py-2 rounded"
+			  >
+				Deposit
+			  </button>
+			</div>
+
+			<div className="text-center text-sm text-gray-400 mb-2">
+			  Improve your account security with Two-Factor Authentication
+			</div>
+			<button className="w-full bg-gray-700 hover:bg-gray-600 py-2 rounded">
+			  Enable 2FA
+			</button>
+		  </>
+		)}
 
         {/* Deposit */}
         {tab === "deposit" && (
