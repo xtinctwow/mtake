@@ -53,14 +53,17 @@ export default function WalletModal({ onClose }: { onClose: () => void }) {
         body: JSON.stringify({ amount: val, pay_currency: currency }),
       });
       const data = await res.json();
-        <div className="flex space-x-4 mb-6 border-b border-gray-700 pb-2">
-          <button
-            onClick={() => setTab("overview")}
-            className={`px-3 py-1 rounded ${tab === "overview" ? "bg-gray-800 text-white" : "text-gray-400 hover:text-white"}`}
-          >
-            Overview
-          </button>
-          <button
+      if (data?.invoice_url) {
+        window.location.href = data.invoice_url;
+      } else {
+        alert("Failed to create invoice.");
+      }
+    } catch (err) {
+      console.error("Error creating invoice", err);
+      alert("An error occurred while creating the invoice.");
+    } finally {
+      setLoading(false);
+    }
             onClick={() => setTab("deposit")}
             className={`px-3 py-1 rounded ${tab === "deposit" ? "bg-gray-800 text-white" : "text-gray-400 hover:text-white"}`}
           >
