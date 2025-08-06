@@ -63,7 +63,7 @@ export default function WalletModal({ onClose }: { onClose: () => void }) {
       alert("An error occurred while creating the invoice.");
     } finally {
       setLoading(false);
-    }
+          <button
             onClick={() => setTab("deposit")}
             className={`px-3 py-1 rounded ${tab === "deposit" ? "bg-gray-800 text-white" : "text-gray-400 hover:text-white"}`}
           >
