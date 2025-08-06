@@ -131,7 +131,7 @@ export default function WalletModal({ onClose }: { onClose: () => void }) {
                 <tbody>
                   <tr className="border-t border-gray-700 py-2">
                     <td className="py-2 flex items-center gap-2">
-                      <span className="text-xl">🪙</span>
+                      <span className="text-xl"><img src="https://s2.coinmarketcap.com/static/img/coins/32x32/1.png"/></span>
                       <div>
                         <div className="font-semibold">BTC</div>
                         <div className="text-gray-400 text-xs">Bitcoin</div>
