@@ -153,12 +153,11 @@ export default function WalletModal({ onClose }: { onClose: () => void }) {
                 Withdraw
               </button>
               <button
-                onClick={handleDeposit}
-                disabled={loading}
-                className="w-full bg-green-600 hover:bg-green-500 py-2 rounded"
-              >
-                {loading ? "Redirecting..." : "Deposit"}
-              </button>
+				  onClick={() => setTab("deposit")}
+				  className="w-full bg-green-600 hover:bg-green-500 py-2 rounded"
+				>
+				  Deposit
+			</button>
             </div>
 
             <div className="text-center text-sm text-gray-400 mb-2">
