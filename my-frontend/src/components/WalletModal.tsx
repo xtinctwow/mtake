@@ -239,15 +239,25 @@ export default function WalletModal({ onClose }: { onClose: () => void }) {
   </div>
 </div>
 
-            {selectedCurrency === "btc" && btcAddress && (
-              <div className="flex justify-center">
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${btcAddress}`}
-                  alt="QR Code"
-                  className="border border-gray-700 rounded"
-                />
-              </div>
-            )}
+						{selectedCurrency === "btc" && btcAddress && (
+			  <div className="flex justify-center">
+				<img
+				  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${btcAddress}`}
+				  alt="BTC QR Code"
+				  className="border border-gray-700 rounded"
+				/>
+			  </div>
+			)}
+
+			{selectedCurrency === "sol" && solAddress && (
+			  <div className="flex justify-center">
+				<img
+				  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${solAddress}`}
+				  alt="SOL QR Code"
+				  className="border border-gray-700 rounded"
+				/>
+			  </div>
+			)}
 
             <div className="text-center text-gray-400 text-sm">
               <p>Or deposit directly from your wallet</p>

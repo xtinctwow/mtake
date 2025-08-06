@@ -2,6 +2,7 @@ import express from "express";
 import { PrismaClient } from "@prisma/client";
 import { authenticateToken, AuthRequest } from "../middleware/auth";
 import crypto from "crypto";
+import { generateCryptoAddress } from "../utils/nowpayments";
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -159,14 +160,29 @@ router.post("/ipn", express.json(), async (req, res) => {
 
 router.get("/btc", authenticateToken, async (req: AuthRequest, res) => {
   try {
-    const wallet = await prisma.btcWallet.findUnique({
-      where: { userId: req.userId },
+    const userId = req.userId;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    let wallet = await prisma.btcWallet.findUnique({
+      where: { userId },
     });
 
-    if (!wallet) return res.status(404).json({ message: "BTC Wallet not found" });
+    if (!wallet) {
+      // ✅ Uporabi NOWPayments za pravi BTC naslov
+      const generatedAddress = await generateCryptoAddress("btc", userId);
+
+      wallet = await prisma.btcWallet.create({
+        data: {
+          userId,
+          address: generatedAddress,
+          balance: 0,
+        },
+      });
+    }
 
     res.json({ address: wallet.address, balance: wallet.balance });
   } catch (error) {
+    console.error("Error fetching BTC wallet:", error);
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -176,14 +192,13 @@ router.get("/sol", authenticateToken, async (req: AuthRequest, res) => {
     const userId = req.userId;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-    // 1. Preveri, če že obstaja SOL wallet
     let wallet = await prisma.solWallet.findUnique({
       where: { userId },
     });
 
-    // 2. Če ne obstaja => ustvari novega
     if (!wallet) {
-      const generatedAddress = `solana_${userId}_${Date.now()}`;
+      // ✅ Uporabi NOWPayments za pravi naslov
+      const generatedAddress = await generateCryptoAddress("sol", userId);
 
       wallet = await prisma.solWallet.create({
         data: {
