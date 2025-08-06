@@ -62,27 +62,31 @@ export default function WalletModal({ onClose }: { onClose: () => void }) {
       console.error("Error creating invoice", err);
       alert("An error occurred while creating the invoice.");
     } finally {
-      setLoading(false);
-          <button
-            onClick={() => setTab("deposit")}
-            className={`px-3 py-1 rounded ${tab === "deposit" ? "bg-gray-800 text-white" : "text-gray-400 hover:text-white"}`}
-          >
-            Deposit
-          </button>
+    }
 
-          <button
-            onClick={() => setTab("buy")}
-            className={`px-3 py-1 rounded ${tab === "buy" ? "bg-gray-800 text-white" : "text-gray-400 hover:text-white"}`}
-          >
-            Buy Crypto
-          </button>
+    return (
+      <>
+        <button
+          onClick={() => setTab("deposit")}
+          className={`px-3 py-1 rounded ${tab === "deposit" ? "bg-gray-800 text-white" : "text-gray-400 hover:text-white"}`}
+        >
+          Deposit
+        </button>
 
-          <button
-            onClick={() => setTab("settings")}
-            className={`px-3 py-1 rounded ${tab === "settings" ? "bg-gray-800 text-white" : "text-gray-400 hover:text-white"}`}
-          >
-            Settings
-          </button>
+        <button
+          onClick={() => setTab("buy")}
+          className={`px-3 py-1 rounded ${tab === "buy" ? "bg-gray-800 text-white" : "text-gray-400 hover:text-white"}`}
+        >
+          Buy Crypto
+        </button>
+
+        <button
+          onClick={() => setTab("settings")}
+          className={`px-3 py-1 rounded ${tab === "settings" ? "bg-gray-800 text-white" : "text-gray-400 hover:text-white"}`}
+        >
+          Settings
+        </button>
+      </>
         </div>
       console.error("Error creating invoice", err);
     }
