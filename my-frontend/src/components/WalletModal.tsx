@@ -1,3 +1,5 @@
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3000";
+
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 
