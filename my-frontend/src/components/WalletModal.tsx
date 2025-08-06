@@ -76,66 +76,41 @@ export default function WalletModal({ onClose }: { onClose: () => void }) {
       >
         <button
           onClick={onClose}
-        {tab === "deposit" && (
-          <div className="space-y-4">
-            <div>
-              <p className="text-sm text-gray-400">Currency</p>
-              <select
-                value={selectedCurrency}
-                onChange={(e) => setSelectedCurrency(e.target.value)}
-                className="w-full p-2 rounded bg-gray-800 text-white"
-              >
-                <option value="btc">BTC (Bitcoin)</option>
-                <option value="sol">SOL (Solana)</option>
-              </select>
-            </div>
+          className="absolute top-2 right-2 text-gray-400 hover:text-white text-xl"
+        >
+          ×
+        </button>
 
-            <div>
-              <p className="text-sm text-gray-400">Address</p>
-              <div className="flex items-center space-x-2 bg-gray-800 rounded px-3 py-2">
-                <span className="truncate">{selectedCurrency === "btc" ? btcAddress || "Loading..." : "soon..."}</span>
-                <button
-                  onClick={() => {
-                    const address = selectedCurrency === "btc" ? btcAddress : "soon...";
-                    navigator.clipboard.writeText(address);
-                  }}
-                  className="text-sm text-blue-400 hover:underline"
-                >
-                  Copy
-                </button>
-              </div>
-            </div>
+        {/* Gumbi za zavihke */}
+        <div className="flex space-x-4 mb-6 border-b border-gray-700 pb-2">
+          <button
+            onClick={() => setTab("overview")}
+            className={`px-3 py-1 rounded ${tab === "overview" ? "bg-gray-800 text-white" : "text-gray-400 hover:text-white"}`}
+          >
+            Overview
+          </button>
+          <button
+            onClick={() => setTab("deposit")}
+            className={`px-3 py-1 rounded ${tab === "deposit" ? "bg-gray-800 text-white" : "text-gray-400 hover:text-white"}`}
+          >
+            Deposit
+          </button>
+          <button
+            onClick={() => setTab("buy")}
+            className={`px-3 py-1 rounded ${tab === "buy" ? "bg-gray-800 text-white" : "text-gray-400 hover:text-white"}`}
+          >
+            Buy Crypto
+          </button>
+          <button
+            onClick={() => setTab("settings")}
+            className={`px-3 py-1 rounded ${tab === "settings" ? "bg-gray-800 text-white" : "text-gray-400 hover:text-white"}`}
+          >
+            Settings
+          </button>
+        </div>
 
-            {selectedCurrency === "btc" && btcAddress && (
-              <div className="flex justify-center">
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${btcAddress}`}
-                  alt="QR Code"
-                  className="border border-gray-700 rounded"
-                />
-              </div>
-            )}
-
-            <div className="text-center text-gray-400 text-sm">
-              <p>Or deposit directly from your wallet</p>
-              <div className="flex justify-center space-x-2 mt-2">
-                <span>🦊</span>
-                <span>🌐</span>
-                <span>🔵</span>
-              </div>
-              <p className="mt-2">Credited after 1 confirmation</p>
-            </div>
-          </div>
-        )}
-              <div className="flex justify-center space-x-2 mt-2">
-                <span>🦊</span>
-                <span>🌐</span>
-                <span>🔵</span>
-              </div>
-              <p className="mt-2">Credited after 1 confirmation</p>
-            </div>
-          </div>
-        )}
+        {/* Overview tab */}
+        {tab === "overview" && (
           <>
             <div className="mb-6">
               <p className="text-sm text-gray-400">Balance</p>
@@ -177,11 +152,11 @@ export default function WalletModal({ onClose }: { onClose: () => void }) {
                 Withdraw
               </button>
               <button
-				  onClick={() => setTab("deposit")}
-				  className="w-full bg-green-600 hover:bg-green-500 py-2 rounded"
-				>
-				  Deposit
-			</button>
+                onClick={() => setTab("deposit")}
+                className="w-full bg-green-600 hover:bg-green-500 py-2 rounded"
+              >
+                Deposit
+              </button>
             </div>
 
             <div className="text-center text-sm text-gray-400 mb-2">
@@ -211,9 +186,12 @@ export default function WalletModal({ onClose }: { onClose: () => void }) {
             <div>
               <p className="text-sm text-gray-400">Address</p>
               <div className="flex items-center space-x-2 bg-gray-800 rounded px-3 py-2">
-                <span className="truncate">{btcAddress || "Loading..."}</span>
+                <span className="truncate">{selectedCurrency === "btc" ? btcAddress || "Loading..." : "Coming soon..."}</span>
                 <button
-                  onClick={() => navigator.clipboard.writeText(btcAddress)}
+                  onClick={() => {
+                    const address = selectedCurrency === "btc" ? btcAddress : "Coming soon...";
+                    navigator.clipboard.writeText(address);
+                  }}
                   className="text-sm text-blue-400 hover:underline"
                 >
                   Copy
@@ -221,7 +199,7 @@ export default function WalletModal({ onClose }: { onClose: () => void }) {
               </div>
             </div>
 
-            {btcAddress && (
+            {selectedCurrency === "btc" && btcAddress && (
               <div className="flex justify-center">
                 <img
                   src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${btcAddress}`}
@@ -243,7 +221,7 @@ export default function WalletModal({ onClose }: { onClose: () => void }) {
           </div>
         )}
 
-        {/* Buy Crypto */}
+        {/* Buy */}
         {tab === "buy" && (
           <div className="text-gray-400 text-sm">
             <p>Feature coming soon: Buy crypto directly inside the wallet!</p>
