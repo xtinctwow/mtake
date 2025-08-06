@@ -53,12 +53,32 @@ export default function WalletModal({ onClose }: { onClose: () => void }) {
         body: JSON.stringify({ amount: val, pay_currency: currency }),
       });
       const data = await res.json();
-      if (data?.invoice_url) {
-        window.location.href = data.invoice_url;
-      } else {
-        alert("Failed to create invoice.");
-      }
-    } catch (err) {
+        <div className="flex space-x-4 mb-6 border-b border-gray-700 pb-2">
+          <button
+            onClick={() => setTab("overview")}
+            className={`px-3 py-1 rounded ${tab === "overview" ? "bg-gray-800 text-white" : "text-gray-400 hover:text-white"}`}
+          >
+            Overview
+          </button>
+          <button
+            onClick={() => setTab("deposit")}
+            className={`px-3 py-1 rounded ${tab === "deposit" ? "bg-gray-800 text-white" : "text-gray-400 hover:text-white"}`}
+          >
+            Deposit
+          </button>
+          <button
+            onClick={() => setTab("buy")}
+            className={`px-3 py-1 rounded ${tab === "buy" ? "bg-gray-800 text-white" : "text-gray-400 hover:text-white"}`}
+          >
+            Buy Crypto
+          </button>
+          <button
+            onClick={() => setTab("settings")}
+            className={`px-3 py-1 rounded ${tab === "settings" ? "bg-gray-800 text-white" : "text-gray-400 hover:text-white"}`}
+          >
+            Settings
+          </button>
+        </div>
       console.error("Error creating invoice", err);
     }
     setLoading(false);
