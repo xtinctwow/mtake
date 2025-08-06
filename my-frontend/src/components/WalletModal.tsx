@@ -93,9 +93,7 @@ export default function WalletModal({ onClose }: { onClose: () => void }) {
             <div>
               <p className="text-sm text-gray-400">Address</p>
               <div className="flex items-center space-x-2 bg-gray-800 rounded px-3 py-2">
-                <span className="truncate">
-                  {selectedCurrency === "btc" ? btcAddress || "Loading..." : "soon..."}
-                </span>
+                <span className="truncate">{selectedCurrency === "btc" ? btcAddress || "Loading..." : "soon..."}</span>
                 <button
                   onClick={() => {
                     const address = selectedCurrency === "btc" ? btcAddress : "soon...";
@@ -120,6 +118,15 @@ export default function WalletModal({ onClose }: { onClose: () => void }) {
 
             <div className="text-center text-gray-400 text-sm">
               <p>Or deposit directly from your wallet</p>
+              <div className="flex justify-center space-x-2 mt-2">
+                <span>🦊</span>
+                <span>🌐</span>
+                <span>🔵</span>
+              </div>
+              <p className="mt-2">Credited after 1 confirmation</p>
+            </div>
+          </div>
+        )}
               <div className="flex justify-center space-x-2 mt-2">
                 <span>🦊</span>
                 <span>🌐</span>
