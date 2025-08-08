@@ -27,6 +27,60 @@ export default function Topbar({
     logout();
     navigate("/");
   };
+  
+	const [btcBalance, setBtcBalance] = useState(0);
+	const [solBalance, setSolBalance] = useState(0);
+	const [btcPrice, setBtcPrice] = useState(68000);
+	const [solPrice, setSolPrice] = useState(150);
+	const [showBalanceDropdown, setShowBalanceDropdown] = useState(false);
+
+	useEffect(() => {
+	  const fetchBalances = async () => {
+		if (!isAuthenticated || !token) return;
+
+		try {
+		  const [btcRes, solRes, pricesRes] = await Promise.all([
+			fetch(`${api}/api/wallet/btc`, { headers: { Authorization: `Bearer ${token}` } }),
+			fetch(`${api}/api/wallet/sol`, { headers: { Authorization: `Bearer ${token}` } }),
+			fetch(`${api}/api/wallet/prices`),
+		  ]);
+
+		  if (btcRes.ok) {
+			const data = await btcRes.json();
+			setBtcBalance(data.balance || 0);
+		  }
+
+		  if (solRes.ok) {
+			const data = await solRes.json();
+			setSolBalance(data.balance || 0);
+		  }
+
+		  if (pricesRes.ok) {
+			const data = await pricesRes.json();
+			if (data.BTC) setBtcPrice(data.BTC);
+			if (data.SOL) setSolPrice(data.SOL);
+		  }
+		} catch (error) {
+		  console.error("Error fetching balances:", error);
+		}
+	  };
+
+	  fetchBalances();
+	}, [token, isAuthenticated]);
+	
+	const balanceDropdownRef = useRef<HTMLDivElement>(null);
+	useEffect(() => {
+	  const handleClickOutside = (event: MouseEvent) => {
+		if (
+		  balanceDropdownRef.current &&
+		  !balanceDropdownRef.current.contains(event.target as Node)
+		) {
+		  setShowBalanceDropdown(false);
+		}
+	  };
+	  document.addEventListener("mousedown", handleClickOutside);
+	  return () => document.removeEventListener("mousedown", handleClickOutside);
+	}, []);
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -55,16 +109,60 @@ export default function Topbar({
 
       {/* CENTER - BALANCE & WALLET (only if logged in) */}
       {isAuthenticated && (
-        <div className="absolute left-1/2 -translate-x-1/2 flex items-center space-x-4">
-          <div className="font-mono bg-gray-700 rounded px-3 py-1">{balance} BTC</div>
-          <button
-            onClick={onWalletClick}
-            className="bg-blue-600 hover:bg-blue-700 rounded px-4 py-1 text-white"
-          >
-            Wallet
-          </button>
-        </div>
-      )}
+		  <div className="absolute left-1/2 -translate-x-1/2 flex items-center space-x-4" ref={balanceDropdownRef}>
+			{/* Balance Dropdown */}
+			<div className="relative">
+			  <button
+				onClick={() => setShowBalanceDropdown(!showBalanceDropdown)}
+				className="font-mono bg-gray-700 hover:bg-gray-600 rounded px-3 py-1"
+			  >
+				{btcBalance.toFixed(8)} BTC
+			  </button>
+			  {showBalanceDropdown && (
+				<div className="absolute left-1/2 -translate-x-1/2 mt-2 w-64 bg-white text-black rounded shadow-lg p-4 z-50">
+				  <h2 className="text-sm font-semibold text-gray-700 mb-2">Your Balances</h2>
+				  <div className="space-y-2 text-sm">
+					{btcBalance > 0 && (
+					  <div className="flex justify-between">
+						<div className="flex gap-2 items-center">
+						  <img src="https://s2.coinmarketcap.com/static/img/coins/32x32/1.png" alt="BTC" className="w-5 h-5" />
+						  <span>BTC</span>
+						</div>
+						<div className="text-right">
+						  <div className="font-mono">{btcBalance.toFixed(8)}</div>
+						  <div className="text-xs text-gray-500">${(btcBalance * btcPrice).toFixed(2)} USDT</div>
+						</div>
+					  </div>
+					)}
+					{solBalance > 0 && (
+					  <div className="flex justify-between">
+						<div className="flex gap-2 items-center">
+						  <img src="https://s2.coinmarketcap.com/static/img/coins/32x32/5426.png" alt="SOL" className="w-5 h-5" />
+						  <span>SOL</span>
+						</div>
+						<div className="text-right">
+						  <div className="font-mono">{solBalance.toFixed(8)}</div>
+						  <div className="text-xs text-gray-500">${(solBalance * solPrice).toFixed(2)} USDT</div>
+						</div>
+					  </div>
+					)}
+					{btcBalance <= 0 && solBalance <= 0 && (
+					  <div className="text-gray-500 text-center">No funds available.</div>
+					)}
+				  </div>
+				</div>
+			  )}
+			</div>
+
+			{/* Wallet Button */}
+			<button
+			  onClick={onWalletClick}
+			  className="bg-blue-600 hover:bg-blue-700 rounded px-4 py-1 text-white"
+			>
+			  Wallet
+			</button>
+		  </div>
+		)}
 
       {/* RIGHT - AUTH / ICONS */}
       <div className="flex items-center space-x-4 z-10">
