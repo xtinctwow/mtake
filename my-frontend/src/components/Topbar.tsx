@@ -14,9 +14,18 @@ export default function Topbar({ balance, onWalletClick }: { balance: string; on
     <header className="flex justify-between items-center bg-gray-800 px-6 py-3 text-white">
       <div className="flex items-center space-x-4">
         <div className="font-mono bg-gray-700 rounded px-3 py-1">{balance} BTC</div>
-        <button onClick={onWalletClick} className="bg-blue-600 hover:bg-blue-700 rounded px-4 py-1 text-white">
-  Wallet
-</button>
+        <button
+          onClick={() => {
+            if (!isAuthenticated) {
+              navigate("/login");
+            } else {
+              onWalletClick();
+            }
+          }}
+          className="bg-blue-600 hover:bg-blue-700 rounded px-4 py-1 text-white"
+        >
+          Wallet
+        </button>
       </div>
 
       <div className="flex items-center space-x-4">
