@@ -31,7 +31,7 @@ const Sidebar = ({ collapsed, setCollapsed }: SidebarProps) => {
   return (
     <aside className={`h-full bg-gray-900 text-white transition-all duration-300 ${collapsed ? "w-20" : "w-64"}`}>
       {/* Header */}
-      <div className={`flex items-center ${collapsed ? "justify-center" : "justify-start gap-2"} px-2 mb-6`}>
+      <div className={`flex items-center h-16 ${collapsed ? "justify-center" : "justify-start gap-2"} px-2`}>
         <button onClick={toggleSidebar} className="text-white p-2 hover:bg-gray-700 rounded">
           <FaBars />
         </button>

@@ -16,46 +16,60 @@ export default function App() {
   const [showWallet, setShowWallet] = useState(false);
   const isAuthenticated = !!token;
 
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => window.innerWidth < 770);
+  const desktopResetQuery = window.matchMedia("(max-width:800 && min-width: 100%)");
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => window.innerWidth < 800);
+  const [isSidebarVisible, setIsSidebarVisible] = useState(() => window.innerWidth >= 600);
   const [userToggledSidebar, setUserToggledSidebar] = useState(false);
 
   // Handle screen resize
   useEffect(() => {
-  const mediaQuery = window.matchMedia("(max-width: 769px)");
+  const collapseQuery = window.matchMedia("(max-width: 799px)");
+  const hideQuery = window.matchMedia("(max-width: 599px)");
 
-  const handleMediaChange = (e: MediaQueryListEvent) => {
-    const shouldCollapse = e.matches;
+  const handleResize = () => {
+    const shouldCollapse = collapseQuery.matches;
+    const shouldHide = hideQuery.matches;
 
-    setIsSidebarCollapsed(shouldCollapse);
-    setUserToggledSidebar(false); // reset manual toggle when screen crosses breakpoint
+    setIsSidebarVisible(!shouldHide);
+
+    if (!userToggledSidebar) {
+      setIsSidebarCollapsed(shouldCollapse);
+    }
+	
+	if (desktopResetQuery.matches && !userToggledSidebar) {
+	  setUserToggledSidebar(false);
+	}
   };
 
-  // Initial check
-  if (!userToggledSidebar) {
-    setIsSidebarCollapsed(mediaQuery.matches);
-  }
+  handleResize(); // init
 
-  mediaQuery.addEventListener("change", handleMediaChange);
-  return () => mediaQuery.removeEventListener("change", handleMediaChange);
+  collapseQuery.addEventListener("change", handleResize);
+  hideQuery.addEventListener("change", handleResize);
+
+  return () => {
+    collapseQuery.removeEventListener("change", handleResize);
+    hideQuery.removeEventListener("change", handleResize);
+  };
 }, [userToggledSidebar]);
-
-  // Collapsed width classes
-  const sidebarWidth = isSidebarCollapsed ? "w-20" : "w-64";
-  const contentPadding = isSidebarCollapsed ? "pl-20" : "pl-64";
-  const topbarLeft = isSidebarCollapsed ? "left-20" : "left-64";
+	
+	const sidebarWidth = !isSidebarVisible ? "w-0" : isSidebarCollapsed ? "w-20" : "w-64";
+	const contentPadding = !isSidebarVisible ? "pl-0" : isSidebarCollapsed ? "pl-20" : "pl-64";
+	const topbarLeft = !isSidebarVisible ? "left-0" : isSidebarCollapsed ? "left-20" : "left-64";
 
   return (
     <>
       {/* Sidebar */}
-      <div className={`fixed left-0 top-0 h-screen z-50 transition-all duration-300 ${sidebarWidth}`}>
-        <Sidebar
-          collapsed={isSidebarCollapsed}
-          setCollapsed={(val) => {
-            setIsSidebarCollapsed(val);
-            setUserToggledSidebar(true); // mark manual override
-          }}
-        />
-      </div>
+      {isSidebarVisible && (
+		  <div className={`fixed left-0 top-0 h-screen z-50 transition-all duration-300 ${sidebarWidth}`}>
+			<Sidebar
+			  collapsed={isSidebarCollapsed}
+			  setCollapsed={(val) => {
+				setIsSidebarCollapsed(val);
+				setUserToggledSidebar(true);
+			  }}
+			/>
+		  </div>
+		)}
 
       {/* Topbar */}
       <div className={`fixed top-0 right-0 h-16 z-40 transition-all duration-300 ${topbarLeft}`}>
