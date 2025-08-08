@@ -9,6 +9,7 @@ export default function WalletPage({
   balance: number;
   setBalance: (n: number) => void;
 }) {
+  if (!token) return null;
   const { token } = useAuth();
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("btc");
