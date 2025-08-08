@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: "0.0.0.0",  // ✅ Bind to all interfaces
-    port: 5173
+    port: 5173,
+	allowedHosts: ['cyebe.com', 'www.cyebe.com']
   },
 });
