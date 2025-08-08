@@ -25,7 +25,7 @@ export default function Topbar({
 
   const handleLogout = () => {
     logout();
-    navigate("/login");
+    navigate("/");
   };
 
   // Close dropdowns on outside click
