@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useCurrency } from "../context/CurrencyContext";
 import {
   FaDice, FaWallet, FaUserShield, FaCrown, FaUsers, FaChartBar,
   FaExchangeAlt, FaClipboardList, FaCog, FaLightbulb, FaHeadset,
@@ -16,6 +17,7 @@ export default function Topbar({
 }) {
   const { isAuthenticated, logout, token } = useAuth();
   const navigate = useNavigate();
+  const { selectedCurrency, setSelectedCurrency } = useCurrency();
 
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -36,14 +38,14 @@ export default function Topbar({
 	const [solPrice, setSolPrice] = useState(150);
 	const [showBalanceDropdown, setShowBalanceDropdown] = useState(false);
 	
-	const [selectedCurrency, setSelectedCurrency] = useState<"BTC" | "SOL">(() => {
+	/*const [selectedCurrency, setSelectedCurrency] = useState<"BTC" | "SOL">(() => {
 	  const saved = localStorage.getItem("selectedCurrency");
 	  return saved === "BTC" || saved === "SOL" ? saved : "BTC";
 	});
 
 	useEffect(() => {
 	  localStorage.setItem("selectedCurrency", selectedCurrency);
-	}, [selectedCurrency]);
+	}, [selectedCurrency]);*/
 
 	useEffect(() => {
 	  const fetchBalances = async () => {

@@ -15,9 +15,22 @@ export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
     return saved === "BTC" || saved === "SOL" ? saved : "BTC";
   });
 
+  // Shrani v localStorage pri spremembi
   useEffect(() => {
     localStorage.setItem("selectedCurrency", selectedCurrency);
   }, [selectedCurrency]);
+
+  // Poslušaj spremembe iz drugih zavihkov/oken
+  useEffect(() => {
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === "selectedCurrency" && (event.newValue === "BTC" || event.newValue === "SOL")) {
+        setSelectedCurrency(event.newValue);
+      }
+    };
+
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
 
   return (
     <CurrencyContext.Provider value={{ selectedCurrency, setSelectedCurrency }}>
