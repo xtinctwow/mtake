@@ -37,15 +37,6 @@ export default function Topbar({
 	const [btcPrice, setBtcPrice] = useState(68000);
 	const [solPrice, setSolPrice] = useState(150);
 	const [showBalanceDropdown, setShowBalanceDropdown] = useState(false);
-	
-	/*const [selectedCurrency, setSelectedCurrency] = useState<"BTC" | "SOL">(() => {
-	  const saved = localStorage.getItem("selectedCurrency");
-	  return saved === "BTC" || saved === "SOL" ? saved : "BTC";
-	});
-
-	useEffect(() => {
-	  localStorage.setItem("selectedCurrency", selectedCurrency);
-	}, [selectedCurrency]);*/
 
 	useEffect(() => {
 	  const fetchBalances = async () => {
@@ -58,14 +49,19 @@ export default function Topbar({
 			fetch(`${api}/api/wallet/prices`),
 		  ]);
 
+		  let btc = 0;
+		  let sol = 0;
+
 		  if (btcRes.ok) {
 			const data = await btcRes.json();
-			setBtcBalance(data.balance || 0);
+			btc = data.balance || 0;
+			setBtcBalance(btc);
 		  }
 
 		  if (solRes.ok) {
 			const data = await solRes.json();
-			setSolBalance(data.balance || 0);
+			sol = data.balance || 0;
+			setSolBalance(sol);
 		  }
 
 		  if (pricesRes.ok) {
@@ -73,6 +69,12 @@ export default function Topbar({
 			if (data.BTC) setBtcPrice(data.BTC);
 			if (data.SOL) setSolPrice(data.SOL);
 		  }
+
+		  if (btc <= 0 && sol <= 0) {
+			setSelectedCurrency("BTC");
+			localStorage.setItem("selectedCurrency", "BTC");
+		  }
+
 		} catch (error) {
 		  console.error("Error fetching balances:", error);
 		}
@@ -171,6 +173,26 @@ export default function Topbar({
 						  <div className="font-mono">{solBalance.toFixed(8)}</div>
 						  <div className="text-xs text-gray-500">${(solBalance * solPrice).toFixed(2)} USDT</div>
 						</div>
+					  </div>
+					)}
+					
+					{btcBalance <= 0 && solBalance <= 0 && (
+					  <div className="flex flex-col items-center text-center text-gray-500 space-y-2">
+						<img
+						  src="https://s2.coinmarketcap.com/static/cloud/img/loyalty-program/diamond-icon.svg"
+						  alt="Empty"
+						  className="w-8 h-8 mx-auto"
+						/>
+						<div>Your wallet is empty.</div>
+						<button
+						  onClick={() => {
+							setShowBalanceDropdown(false);
+							onWalletClick();
+						  }}
+						  className="mt-2 bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-1 rounded"
+						>
+						  Wallet
+						</button>
 					  </div>
 					)}
 				  </div>

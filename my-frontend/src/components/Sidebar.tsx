@@ -1,17 +1,32 @@
-// src/components/Sidebar.tsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   FaBars, FaGift, FaUsers, FaCrown, FaBook, FaShieldAlt, FaHeadset, FaGlobe,
   FaDice, FaFootballBall, FaChevronDown, FaChevronRight, FaComments
 } from "react-icons/fa";
 
 const Sidebar = () => {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => window.innerWidth < 770);
+  const [userToggled, setUserToggled] = useState(false);
+
   const [showPromotions, setShowPromotions] = useState(false);
   const [showSponsorships, setShowSponsorships] = useState(false);
   const [showLanguages, setShowLanguages] = useState(false);
 
-  const toggleSidebar = () => setCollapsed(!collapsed);
+  useEffect(() => {
+    const handleResize = () => {
+      if (!userToggled) {
+        setCollapsed(window.innerWidth < 770);
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [userToggled]);
+
+  const toggleSidebar = () => {
+    setCollapsed(!collapsed);
+    setUserToggled(true);
+  };
 
   const navItemBase = "flex items-center space-x-3 px-4 py-2 hover:bg-gray-700 transition-colors rounded";
   const navItemCollapsed = "flex items-center justify-center w-10 h-10 mx-auto hover:bg-gray-700 transition-colors rounded";
@@ -25,43 +40,47 @@ const Sidebar = () => {
   );
 
   return (
-    <aside className={`bg-gray-900 text-white h-screen transition-all duration-300 ${collapsed ? "w-20" : "w-64"} p-2`}>
+    <aside
+	  className={`h-full bg-gray-900 text-white transition-all duration-300 ${
+		collapsed ? "w-20" : "w-64"
+	  }`}
+	>
       {/* Header */}
       <div className={`flex items-center ${collapsed ? "justify-center" : "justify-start gap-2"} px-2 mb-6`}>
-		  <button onClick={toggleSidebar} className="text-white p-2 hover:bg-gray-700 rounded">
-			<FaBars />
-		  </button>
+        <button onClick={toggleSidebar} className="text-white p-2 hover:bg-gray-700 rounded">
+          <FaBars />
+        </button>
 
-		  {!collapsed && (
-			<div className="flex gap-2 ml-2">
-			  <button className="bg-gray-800 px-4 py-2 rounded hover:bg-gray-700 text-sm text-white">
-				Casino
-			  </button>
-			  <button className="bg-gray-800 px-4 py-2 rounded hover:bg-gray-700 text-sm text-white">
-				Sports
-			  </button>
-			</div>
-		  )}
-		</div>
+        {!collapsed && (
+          <div className="flex gap-2 ml-2">
+            <button className="bg-gray-800 px-4 py-2 rounded hover:bg-gray-700 text-sm text-white">
+              Casino
+            </button>
+            <button className="bg-gray-800 px-4 py-2 rounded hover:bg-gray-700 text-sm text-white">
+              Sports
+            </button>
+          </div>
+        )}
+      </div>
 
       <nav className="space-y-1">
-  {/*show ONLY when collapsed */}
-  {collapsed && (
-    <div className="flex flex-col space-y-2 px-2 mb-4">
-      <div className="group relative">
-        <button className="flex items-center justify-center w-full bg-gray-800 hover:bg-gray-700 text-sm text-white py-2 rounded">
-          <FaDice className="text-lg" />
-        </button>
-        <Tooltip text="Casino" />
-      </div>
-      <div className="group relative">
-        <button className="flex items-center justify-center w-full bg-gray-800 hover:bg-gray-700 text-sm text-white py-2 rounded">
-          <FaFootballBall className="text-lg" />
-        </button>
-        <Tooltip text="Sports" />
-      </div>
-    </div>
-  )}
+        {/* Show when collapsed */}
+        {collapsed && (
+          <div className="flex flex-col space-y-2 px-2 mb-4">
+            <div className="group relative">
+              <button className="flex items-center justify-center w-full bg-gray-800 hover:bg-gray-700 text-sm text-white py-2 rounded">
+                <FaDice className="text-lg" />
+              </button>
+              <Tooltip text="Casino" />
+            </div>
+            <div className="group relative">
+              <button className="flex items-center justify-center w-full bg-gray-800 hover:bg-gray-700 text-sm text-white py-2 rounded">
+                <FaFootballBall className="text-lg" />
+              </button>
+              <Tooltip text="Sports" />
+            </div>
+          </div>
+        )}
 
         {/* Promotions Dropdown */}
         <div className="group relative">
