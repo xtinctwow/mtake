@@ -9,7 +9,7 @@ const createInvoiceHandler = async (req: Request, res: Response) => {
   }
 
   const apiKey = process.env.NOWPAYMENTS_API_KEY!;
-  const callbackUrl = "https://46.150.54.192:3000/api/wallet/ipn";
+  const callbackUrl = "https://api.cyebe.com/api/wallet/ipn";
 
   try {
     const response = await fetch("https://api.nowpayments.io/v1/invoice", {

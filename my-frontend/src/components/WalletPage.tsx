@@ -9,6 +9,7 @@ export default function WalletPage({
   balance: number;
   setBalance: (n: number) => void;
 }) {
+  if (!token) return null;
   const { token } = useAuth();
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("btc");
@@ -17,7 +18,7 @@ export default function WalletPage({
   useEffect(() => {
     const fetchBtcWallet = async () => {
       try {
-        const res = await fetch("http://46.150.54.192:3000/api/wallet/btc", {
+        const res = await fetch("https://api.cyebe.com/api/wallet/btc", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -43,7 +44,7 @@ export default function WalletPage({
     setLoading(true);
 
     try {
-      const res = await fetch("http://46.150.54.192:3000/api/wallet/create-invoice", {
+      const res = await fetch("https://api.cyebe.com/api/wallet/create-invoice", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

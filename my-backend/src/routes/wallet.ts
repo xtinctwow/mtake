@@ -83,7 +83,7 @@ router.post("/create-invoice", authenticateToken, async (req: AuthRequest, res) 
         price_amount: amount,
         price_currency: "usd",
         pay_currency,
-        ipn_callback_url: "https://46.150.54.192:3000/api/wallet/ipn",
+        ipn_callback_url: "https://api.cyebe.com/api/wallet/ipn",
         order_description: `Deposit for user ${req.userId}`,
         is_fixed_rate: true,
       }),

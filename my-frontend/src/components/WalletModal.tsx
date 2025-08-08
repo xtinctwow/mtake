@@ -105,6 +105,7 @@ useEffect(() => {
     }
   };
 
+  if (!token) return null;
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300 ease-out animate-fade-in">
       <div
@@ -157,61 +158,72 @@ useEffect(() => {
 			</div>
 
 			<div className="bg-gray-800 rounded p-4 mb-6">
-			  <table className="w-full text-left text-sm">
-				<thead className="text-gray-400">
-				  <tr>
-					<th className="pb-2">Currency</th>
-					<th className="pb-2 text-right">Value</th>
-				  </tr>
-				</thead>
-				<tbody>
-				  {btcBalance > 0 && (
-					<tr className="border-t border-gray-700 py-2">
-					  <td className="py-2 flex items-center gap-2">
-						<span className="text-xl">
-						  <img
-							src="https://s2.coinmarketcap.com/static/img/coins/32x32/1.png"
-							alt="BTC"
-						  />
-						</span>
-						<div>
-						  <div className="font-semibold">BTC</div>
-						  <div className="text-gray-400 text-xs">Bitcoin</div>
-						</div>
-					  </td>
-					  <td className="py-2 text-right">
-						<div className="font-mono">{btcBalance.toFixed(8)}</div>
-						<div className="text-gray-400 text-xs">
-						  ${(btcBalance * btcPrice).toFixed(2)} USDT
-						</div>
-					  </td>
+			  {btcBalance <= 0 && solBalance <= 0 ? (
+				<div className="text-center text-white space-y-2">
+				  <img
+					src="https://s2.coinmarketcap.com/static/cloud/img/loyalty-program/diamond-icon.svg"
+					alt="Empty Wallet"
+					className="mx-auto w-10 h-10"
+				  />
+				  <div className="font-mono">Your wallet is empty.</div>
+				</div>
+			  ) : (
+				<table className="w-full text-left text-sm">
+				  <thead className="text-gray-400">
+					<tr>
+					  <th className="pb-2">Currency</th>
+					  <th className="pb-2 text-right">Value</th>
 					</tr>
-				  )}
+				  </thead>
+				  <tbody>
+					{btcBalance > 0 && (
+					  <tr className="border-t border-gray-700 py-2">
+						<td className="py-2 flex items-center gap-2">
+						  <span className="text-xl">
+							<img
+							  src="https://s2.coinmarketcap.com/static/img/coins/32x32/1.png"
+							  alt="BTC"
+							/>
+						  </span>
+						  <div>
+							<div className="font-semibold">BTC</div>
+							<div className="text-gray-400 text-xs">Bitcoin</div>
+						  </div>
+						</td>
+						<td className="py-2 text-right">
+						  <div className="font-mono">{btcBalance.toFixed(8)}</div>
+						  <div className="text-gray-400 text-xs">
+							${(btcBalance * btcPrice).toFixed(2)} USDT
+						  </div>
+						</td>
+					  </tr>
+					)}
 
-				  {solBalance > 0 && (
-					<tr className="border-t border-gray-700 py-2">
-					  <td className="py-2 flex items-center gap-2">
-						<span className="text-xl">
-						  <img
-							src="https://s2.coinmarketcap.com/static/img/coins/32x32/5426.png"
-							alt="SOL"
-						  />
-						</span>
-						<div>
-						  <div className="font-semibold">SOL</div>
-						  <div className="text-gray-400 text-xs">Solana</div>
-						</div>
-					  </td>
-					  <td className="py-2 text-right">
-						<div className="font-mono">{solBalance.toFixed(8)}</div>
-						<div className="text-gray-400 text-xs">
-						  ${(solBalance * solPrice).toFixed(2)} USDT
-						</div>
-					  </td>
-					</tr>
-				  )}
-				</tbody>
-			  </table>
+					{solBalance > 0 && (
+					  <tr className="border-t border-gray-700 py-2">
+						<td className="py-2 flex items-center gap-2">
+						  <span className="text-xl">
+							<img
+							  src="https://s2.coinmarketcap.com/static/img/coins/32x32/5426.png"
+							  alt="SOL"
+							/>
+						  </span>
+						  <div>
+							<div className="font-semibold">SOL</div>
+							<div className="text-gray-400 text-xs">Solana</div>
+						  </div>
+						</td>
+						<td className="py-2 text-right">
+						  <div className="font-mono">{solBalance.toFixed(8)}</div>
+						  <div className="text-gray-400 text-xs">
+							${(solBalance * solPrice).toFixed(2)} USDT
+						  </div>
+						</td>
+					  </tr>
+					)}
+				  </tbody>
+				</table>
+			  )}
 			</div>
 
 			<div className="flex gap-4 mb-4">
