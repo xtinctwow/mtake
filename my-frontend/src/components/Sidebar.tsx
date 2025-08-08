@@ -4,33 +4,22 @@ import {
   FaDice, FaFootballBall, FaChevronDown, FaChevronRight, FaComments
 } from "react-icons/fa";
 
-const Sidebar = () => {
-  const [collapsed, setCollapsed] = useState(() => window.innerWidth < 770);
-  const [userToggled, setUserToggled] = useState(false);
+interface SidebarProps {
+  collapsed: boolean;
+  setCollapsed: (val: boolean) => void;
+}
 
+const Sidebar = ({ collapsed, setCollapsed }: SidebarProps) => {
   const [showPromotions, setShowPromotions] = useState(false);
   const [showSponsorships, setShowSponsorships] = useState(false);
   const [showLanguages, setShowLanguages] = useState(false);
 
-  useEffect(() => {
-    const handleResize = () => {
-      if (!userToggled) {
-        setCollapsed(window.innerWidth < 770);
-      }
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, [userToggled]);
-
   const toggleSidebar = () => {
     setCollapsed(!collapsed);
-    setUserToggled(true);
   };
 
   const navItemBase = "flex items-center space-x-3 px-4 py-2 hover:bg-gray-700 transition-colors rounded";
   const navItemCollapsed = "flex items-center justify-center w-10 h-10 mx-auto hover:bg-gray-700 transition-colors rounded";
-
   const iconClass = "text-lg";
 
   const Tooltip = ({ text }: { text: string }) => (
@@ -40,11 +29,7 @@ const Sidebar = () => {
   );
 
   return (
-    <aside
-	  className={`h-full bg-gray-900 text-white transition-all duration-300 ${
-		collapsed ? "w-20" : "w-64"
-	  }`}
-	>
+    <aside className={`h-full bg-gray-900 text-white transition-all duration-300 ${collapsed ? "w-20" : "w-64"}`}>
       {/* Header */}
       <div className={`flex items-center ${collapsed ? "justify-center" : "justify-start gap-2"} px-2 mb-6`}>
         <button onClick={toggleSidebar} className="text-white p-2 hover:bg-gray-700 rounded">
