@@ -14,7 +14,7 @@ export default function Topbar({
   balance: string;
   onWalletClick: () => void;
 }) {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout, token } = useAuth();
   const navigate = useNavigate();
 
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -28,11 +28,22 @@ export default function Topbar({
     navigate("/");
   };
   
+  const api = import.meta.env.VITE_API_URL;
+  
 	const [btcBalance, setBtcBalance] = useState(0);
 	const [solBalance, setSolBalance] = useState(0);
 	const [btcPrice, setBtcPrice] = useState(68000);
 	const [solPrice, setSolPrice] = useState(150);
 	const [showBalanceDropdown, setShowBalanceDropdown] = useState(false);
+	
+	const [selectedCurrency, setSelectedCurrency] = useState<"BTC" | "SOL">(() => {
+	  const saved = localStorage.getItem("selectedCurrency");
+	  return saved === "BTC" || saved === "SOL" ? saved : "BTC";
+	});
+
+	useEffect(() => {
+	  localStorage.setItem("selectedCurrency", selectedCurrency);
+	}, [selectedCurrency]);
 
 	useEffect(() => {
 	  const fetchBalances = async () => {
@@ -116,14 +127,21 @@ export default function Topbar({
 				onClick={() => setShowBalanceDropdown(!showBalanceDropdown)}
 				className="font-mono bg-gray-700 hover:bg-gray-600 rounded px-3 py-1"
 			  >
-				{btcBalance.toFixed(8)} BTC
+				{selectedCurrency === "BTC" && `${btcBalance.toFixed(8)} BTC`}
+				{selectedCurrency === "SOL" && `${solBalance.toFixed(8)} SOL`}
 			  </button>
 			  {showBalanceDropdown && (
 				<div className="absolute left-1/2 -translate-x-1/2 mt-2 w-64 bg-white text-black rounded shadow-lg p-4 z-50">
 				  <h2 className="text-sm font-semibold text-gray-700 mb-2">Your Balances</h2>
 				  <div className="space-y-2 text-sm">
 					{btcBalance > 0 && (
-					  <div className="flex justify-between">
+					  <div
+						className="flex justify-between items-center hover:bg-gray-200 px-2 py-1 rounded cursor-pointer"
+						onClick={() => {
+						  setSelectedCurrency("BTC");
+						  setShowBalanceDropdown(false);
+						}}
+					  >
 						<div className="flex gap-2 items-center">
 						  <img src="https://s2.coinmarketcap.com/static/img/coins/32x32/1.png" alt="BTC" className="w-5 h-5" />
 						  <span>BTC</span>
@@ -134,8 +152,15 @@ export default function Topbar({
 						</div>
 					  </div>
 					)}
+					
 					{solBalance > 0 && (
-					  <div className="flex justify-between">
+					  <div
+						className="flex justify-between items-center hover:bg-gray-200 px-2 py-1 rounded cursor-pointer"
+						onClick={() => {
+						  setSelectedCurrency("SOL");
+						  setShowBalanceDropdown(false);
+						}}
+					  >
 						<div className="flex gap-2 items-center">
 						  <img src="https://s2.coinmarketcap.com/static/img/coins/32x32/5426.png" alt="SOL" className="w-5 h-5" />
 						  <span>SOL</span>
@@ -145,9 +170,6 @@ export default function Topbar({
 						  <div className="text-xs text-gray-500">${(solBalance * solPrice).toFixed(2)} USDT</div>
 						</div>
 					  </div>
-					)}
-					{btcBalance <= 0 && solBalance <= 0 && (
-					  <div className="text-gray-500 text-center">No funds available.</div>
 					)}
 				  </div>
 				</div>
