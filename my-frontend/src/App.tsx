@@ -79,18 +79,26 @@ export default function App() {
         />
       </div>
 
-      {/* Main content */}
-      <div className={`bg-gray-900 text-white min-h-screen pt-16 transition-all duration-300 ${contentPadding}`}>
+      {/* Main content min-h-screen */}
+      <div className={`topbarbg text-white pt-16 transition-all duration-300 ${contentPadding}`}>
         <Routes>
           <Route
             path="/"
             element={
-              <main className="p-6 overflow-auto">
-                <h2 className="text-2xl font-semibold mb-4">
-                  {isAuthenticated ? `Welcome ${email}` : "Welcome to Stake Clone"}
-                </h2>
-
-                <section className="mb-8">
+              <main className="mainpadding p-6 overflow-auto no-padding">
+			  <div className="topheaderbg">
+				  {isAuthenticated ? (
+					<h2 className="max-w-[1200px] mx-auto text-2xl mb-4">
+					  Welcome {email}
+					</h2>
+				  ) : (
+					<h2 className="max-w-[1200px] mx-auto text-2xl mb-4">
+					  Welcome to Cyebe
+					</h2>
+				  )}
+			  </div>
+                
+                <section className="max-w-[1200px] mx-auto mb-8">
                   <h2 className="text-xl font-semibold mb-4">Continue Playing</h2>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
                     <GameCard title="Roulette" players={632} />
@@ -104,7 +112,7 @@ export default function App() {
                   </div>
                 </section>
 
-                <section>
+                <section className="max-w-[1200px] mx-auto">
                   <h2 className="text-xl font-semibold mb-4">Trending Games</h2>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
                     <GameCard title="Sweet Bonanza" players={1234} />
@@ -125,7 +133,124 @@ export default function App() {
           <Route path="/login" element={<Login />} />
         </Routes>
       </div>
+	  
+	  {/* Footer min-h-screen */}
+	  <div className={`footerbg text-white pt-16 transition-all duration-300 ${contentPadding}`}>
+		  
+				  <main className="max-w-[1200px] mx-auto p-6 overflow-auto no-padding">
+				  <footer className="text-sm mainpadding">
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-6 border-b border-gray-700 pb-8">
+              
+              {/* Casino */}
+              <div>
+                <h3 className="font-semibold mb-2">Casino</h3>
+                <ul className="space-y-1">
+                  <li>Casino Games</li>
+                  <li>Slots</li>
+                  <li>Live Casino</li>
+                  <li>Roulette</li>
+                  <li>Blackjack</li>
+                  <li>Poker</li>
+                  <li>Publishers</li>
+                  <li>Promos & Competitions</li>
+                  <li>Stake Engine</li>
+                </ul>
+              </div>
 
+              {/* Sports */}
+              <div>
+                <h3 className="font-semibold mb-2">Sports</h3>
+                <ul className="space-y-1">
+                  <li>Sportsbook</li>
+                  <li>Live Sports</li>
+                  <li>Soccer</li>
+                  <li>Basketball</li>
+                  <li>Tennis</li>
+                  <li>eSports</li>
+                  <li>Bet Bonuses</li>
+                  <li>Sports Rules</li>
+                  <li>Racing Rules</li>
+                </ul>
+              </div>
+
+              {/* Support */}
+              <div>
+                <h3 className="font-semibold mb-2">Support</h3>
+                <ul className="space-y-1">
+                  <li>Help Center</li>
+                  <li>Fairness</li>
+                  <li>Gambling Helpline</li>
+                  <li>Live Support</li>
+                  <li>Self Exclusion</li>
+                  <li>Law Enforcement Request</li>
+                </ul>
+              </div>
+
+              {/* About Us */}
+              <div>
+                <h3 className="font-semibold mb-2">About Us</h3>
+                <ul className="space-y-1">
+                  <li>VIP Club</li>
+                  <li>Affiliate</li>
+                  <li>Privacy Policy</li>
+                  <li>AML Policy</li>
+                  <li>Terms of Service</li>
+                </ul>
+              </div>
+
+              {/* Payment Info */}
+              <div>
+                <h3 className="font-semibold mb-2">Payment Info</h3>
+                <ul className="space-y-1">
+                  <li>Deposit & Withdrawals</li>
+                  <li>Currency Guide</li>
+                  <li>Crypto Guide</li>
+                  <li>Supported Crypto</li>
+                  <li>How to Use the Vault</li>
+                  <li>How Much to Bet With</li>
+                </ul>
+              </div>
+
+              {/* FAQ */}
+              <div>
+                <h3 className="font-semibold mb-2">FAQ</h3>
+                <ul className="space-y-1">
+                  <li>How-to Guides</li>
+                  <li>Online Casino Guide</li>
+                  <li>Sports Betting Guide</li>
+                  <li>How to Live Stream Sports</li>
+                  <li>Stake VIP Guide</li>
+                  <li>House Edge Guide</li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Bottom Info */}
+            <div className="mt-6 text-gray-400 text-xs space-y-3">
+              <p>© 2025 Cyebe.com | All Rights Reserved.</p>
+              <p>
+                Cyebe is owned and operated by CYEBE N.V., registration number: 123456,
+                {/*registered address: Seru Loraweg 17 B, Curaçao. Payment agent companies are Medium Rare
+                Limited and MRS Tech Limited. Contact us at support@cyebe.com.*/}
+              </p>
+              <p>
+                Cyebe is committed to responsible gambling, for more information visit{" "}
+                <a href="https://www.gamblingtherapy.org" className="underline">
+                  Gamblingtherapy.org
+                </a>
+              </p>
+              <p className="makeitcenter">1 SOL = $180.18</p>
+
+              {/* Logos */}
+              <div className="flex flex-col items-center justify-center">
+                <img src="/src/assets/cyebe-logo-web.png" alt="Cyebe Logo" className="makeitcenter" />
+				<br/>
+                <img src="/src/assets/certgcb.svg" alt="GCB Logo" className="makeitcenter h-10" />
+              </div>
+            </div>
+          </footer>
+				  </main>
+	  </div>
       {/* Wallet modal */}
       {showWallet && <WalletModal onClose={() => setShowWallet(false)} />}
     </>

@@ -28,7 +28,7 @@ async function fetchPrice(symbol: string): Promise<number | null> {
 }
 
 export function startPriceUpdater() {
-  cron.schedule("*/5 * * * *", async () => {
+  cron.schedule("*/10 * * * *", async () => {
     console.log("⏳ Updating crypto prices...");
 
     const btc = await fetchPrice("BTC");

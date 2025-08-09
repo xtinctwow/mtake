@@ -7,6 +7,7 @@ import {
   FaExchangeAlt, FaClipboardList, FaCog, FaLightbulb, FaHeadset,
   FaSignOutAlt, FaBell, FaUserCircle, FaSearch
 } from "react-icons/fa";
+import logo from "../assets/cyebe-logo-web.png";
 
 export default function Topbar({
   balance,
@@ -116,10 +117,16 @@ export default function Topbar({
   }, []);
 
   return (
-    <header className="flex justify-between items-center bg-gray-800 px-6 py-3 text-white relative z-50">
+  <header className="topbarbg text-white relative z-50 boxshadow">
+    <div className="max-w-[1200px] mx-auto h-16 justify-between items-center">
+    <header className="flex h-16 justify-between items-center px-6 py-4 text-white relative z-50">
       {/* LEFT - LOGO */}
       <Link to="/" className="flex items-center text-2xl font-bold z-10 space-x-2">
-        <FaDice className="text-lg mr-2" />CYEBE
+        <img
+    src={logo}
+    alt="CYEBE Logo"
+    className="h-auto w-auto mr-2"
+  />
       </Link>
 
       {/* CENTER - BALANCE & WALLET (only if logged in) */}
@@ -129,7 +136,7 @@ export default function Topbar({
 			<div className="relative">
 			  <button
 				onClick={() => setShowBalanceDropdown(!showBalanceDropdown)}
-				className="font-mono bg-gray-700 hover:bg-gray-600 rounded px-3 py-1"
+				className="bg-gray-700 hover:bg-gray-600 rounded px-3 py-1"
 			  >
 				{selectedCurrency === "BTC" && `${btcBalance.toFixed(8)} BTC`}
 				{selectedCurrency === "SOL" && `${solBalance.toFixed(8)} SOL`}
@@ -151,7 +158,7 @@ export default function Topbar({
 						  <span>BTC</span>
 						</div>
 						<div className="text-right">
-						  <div className="font-mono">{btcBalance.toFixed(8)}</div>
+						  <div className="">{btcBalance.toFixed(8)}</div>
 						  <div className="text-xs text-gray-500">${(btcBalance * btcPrice).toFixed(2)} USDT</div>
 						</div>
 					  </div>
@@ -170,7 +177,7 @@ export default function Topbar({
 						  <span>SOL</span>
 						</div>
 						<div className="text-right">
-						  <div className="font-mono">{solBalance.toFixed(8)}</div>
+						  <div className="">{solBalance.toFixed(8)}</div>
 						  <div className="text-xs text-gray-500">${(solBalance * solPrice).toFixed(2)} USDT</div>
 						</div>
 					  </div>
@@ -216,13 +223,13 @@ export default function Topbar({
           <>
             <Link
               to="/login"
-              className="bg-gray-700 hover:bg-gray-600 rounded px-4 py-1"
+              className="bg-gray-700 hover:bg-gray-600 rounded px-4 py-3"
             >
               Login
             </Link>
             <Link
               to="/register"
-              className="bg-blue-600 hover:bg-blue-700 rounded px-4 py-1"
+              className="bg-blue-600 hover:bg-blue-700 rounded px-4 py-3"
             >
               Register
             </Link>
@@ -313,5 +320,7 @@ export default function Topbar({
         )}
       </div>
     </header>
+	</div>
+  </header>
   );
 }
