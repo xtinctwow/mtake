@@ -9,6 +9,11 @@ import Registration from "./components/Registration";
 import Login from "./components/Login";
 import { useAuth } from "./context/AuthContext";
 import WalletModal from "./components/WalletModal";
+import { Link } from "react-router-dom";
+import FacebookButton from "./components/FacebookButton";
+import GoogleButton from "./components/GoogleButton";
+import LineButton from "./components/LineButton";
+import TwitchButton from "./components/TwitchButton";
 
 export default function App() {
   const [balance, setBalance] = useState(0.0);
@@ -88,17 +93,34 @@ export default function App() {
               <main className="mainpadding p-6 overflow-auto no-padding">
 			  <div className="topheaderbg">
 				  {isAuthenticated ? (
-					<h2 className="max-w-[1200px] mx-auto text-2xl mb-4">
+					<h2 className="max-w-[1200px] px-6 mx-auto text-2xl mb-4">
 					  Welcome {email}
 					</h2>
 				  ) : (
-					<h2 className="max-w-[1200px] mx-auto text-2xl mb-4">
-					  Welcome to Cyebe
+				  <>
+				  <div className="max-w-[1200px] px-6 mx-auto mb-4">
+					<h2 className="font-bold leading-[120%] text-left text-3xl py-10 mybold">
+					  World's Best Online<br/>Casino and Sportsbook
 					</h2>
+					<Link
+              to="/register"
+              className="bg-blue-600 hover:bg-blue-700 rounded px-4 py-3"
+            >
+              Register
+            </Link>
+			<p className="pb-2 pt-10">Sign up with:</p>
+			<div className="flex gap-1.5">
+			  <FacebookButton onClick={() => console.log("FB clicked")} />
+			  <GoogleButton onClick={() => console.log("Google clicked")} />
+			  <LineButton onClick={() => console.log("Line clicked")} />
+			  <TwitchButton onClick={() => console.log("Twitch clicked")} />
+			</div>
+			</div>
+			</>
 				  )}
 			  </div>
                 
-                <section className="max-w-[1200px] mx-auto mb-8">
+                <section className="max-w-[1200px] px-6 mx-auto mb-8">
                   <h2 className="text-xl font-semibold mb-4">Continue Playing</h2>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
                     <GameCard title="Roulette" players={632} />
@@ -112,7 +134,7 @@ export default function App() {
                   </div>
                 </section>
 
-                <section className="max-w-[1200px] mx-auto">
+                <section className="max-w-[1200px] px-6 mx-auto">
                   <h2 className="text-xl font-semibold mb-4">Trending Games</h2>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
                     <GameCard title="Sweet Bonanza" players={1234} />
@@ -137,8 +159,8 @@ export default function App() {
 	  {/* Footer min-h-screen */}
 	  <div className={`footerbg text-white pt-16 transition-all duration-300 ${contentPadding}`}>
 		  
-				  <main className="max-w-[1200px] mx-auto p-6 overflow-auto no-padding">
-				  <footer className="text-sm mainpadding">
+				  <main className="max-w-[1200px] px-6 mx-auto p-6 overflow-auto">
+				  <footer className="text-sm pb-6">
             <div className="grid grid-cols-2 md:grid-cols-6 gap-6 border-b border-gray-700 pb-8">
               
               {/* Casino */}
