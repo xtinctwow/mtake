@@ -76,7 +76,7 @@ export default function WalletPage({
 
       <div className="bg-gray-800 p-6 rounded mb-6 max-w-md">
         <p className="mb-2">Current Balance:</p>
-        <div className="text-xl font-mono mb-4">{balance.toFixed(8)} BTC</div>
+        <div className="text-xl mb-4">{balance.toFixed(8)} BTC</div>
 
         <input
           type="number"

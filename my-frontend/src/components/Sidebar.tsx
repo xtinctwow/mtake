@@ -3,6 +3,7 @@ import {
   FaBars, FaGift, FaUsers, FaCrown, FaBook, FaShieldAlt, FaHeadset, FaGlobe,
   FaDice, FaFootballBall, FaChevronDown, FaChevronRight, FaComments
 } from "react-icons/fa";
+import React from "react";
 
 interface SidebarProps {
   collapsed: boolean;
@@ -29,9 +30,9 @@ const Sidebar = ({ collapsed, setCollapsed }: SidebarProps) => {
   );
 
   return (
-    <aside className={`h-full bg-gray-900 text-white transition-all duration-300 ${collapsed ? "w-20" : "w-64"}`}>
+    <aside className={`h-full sidebarbg text-white transition-all duration-300 ${collapsed ? "w-20" : "w-64"}`}>
       {/* Header */}
-      <div className={`flex items-center h-16 ${collapsed ? "justify-center" : "justify-start gap-2"} px-2`}>
+      <div className={`${!collapsed ? "sidebarbgtopbar" : ""} flex items-center h-16 ${collapsed ? "justify-center" : "justify-start"} px-6`}>
         <button onClick={toggleSidebar} className="text-white p-2 hover:bg-gray-700 rounded">
           <FaBars />
         </button>
@@ -48,7 +49,7 @@ const Sidebar = ({ collapsed, setCollapsed }: SidebarProps) => {
         )}
       </div>
 
-      <nav className="space-y-1">
+      <nav className={`${!collapsed ? 'sidebarmenubg' : ''} space-y-1`}>
         {/* Show when collapsed */}
         {collapsed && (
           <div className="flex flex-col space-y-2 px-2 mb-4">
@@ -90,21 +91,34 @@ const Sidebar = ({ collapsed, setCollapsed }: SidebarProps) => {
 
         {/* Static links */}
         {[
-          { icon: <FaUsers className={iconClass} />, text: "Affiliate" },
-          { icon: <FaCrown className={iconClass} />, text: "VIP Club" },
-          { icon: <FaBook className={iconClass} />, text: "Blog" },
-          { icon: <FaComments className={iconClass} />, text: "Forum" },
-          { icon: <FaShieldAlt className={iconClass} />, text: "Responsible Gambling" },
-          { icon: <FaHeadset className={iconClass} />, text: "Live Support" }
-        ].map(({ icon, text }, idx) => (
-          <div className="group relative" key={idx}>
-            <div className={collapsed ? navItemCollapsed : navItemBase} title={collapsed ? text : ""}>
-              {icon}
-              {!collapsed && <span>{text}</span>}
-            </div>
-            {collapsed && <Tooltip text={text} />}
-          </div>
-        ))}
+		  { icon: <FaUsers className={iconClass} />, href: "/affiliate", label: "Affiliate" },
+		  { icon: <FaCrown className={iconClass} />, href: "/vip-club", label: "VIP Club" },
+		  { icon: <FaBook className={iconClass} />, href: "/blog", label: "Blog" },
+		  { icon: <FaComments className={iconClass} />, href: "#", label: "Forum" },
+		  { icon: <FaShieldAlt className={iconClass} />, href: "/responsible-gambling", label: "Responsible Gambling" },
+		  { icon: <FaHeadset className={iconClass} />, href: "/live", label: "Live Support" }
+		].map(({ icon, href, label }, idx, arr) => (
+		  <React.Fragment key={idx}>
+			<div className="group relative">
+			  <a
+				href={href}
+				target="_blank"
+				rel="noopener noreferrer"
+				className={collapsed ? navItemCollapsed : navItemBase}
+				title={collapsed ? label : ""}
+			  >
+				{icon}
+				{!collapsed && <span>{label}</span>}
+			  </a>
+			  {collapsed && <Tooltip text={label} />}
+			</div>
+
+			{/* Insert splitter after Forum */}
+			{label === "Forum" && (
+			  <hr className="linemargin my-2 border-gray-300 dark:border-gray-700" />
+			)}
+		  </React.Fragment>
+		))}
 
         {/* Sponsorships Dropdown */}
         <div className="group relative">

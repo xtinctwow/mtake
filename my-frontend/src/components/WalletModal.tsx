@@ -165,7 +165,7 @@ useEffect(() => {
 					alt="Empty Wallet"
 					className="mx-auto w-10 h-10"
 				  />
-				  <div className="font-mono">Your wallet is empty.</div>
+				  <div className="">Your wallet is empty.</div>
 				</div>
 			  ) : (
 				<table className="w-full text-left text-sm">
@@ -191,7 +191,7 @@ useEffect(() => {
 						  </div>
 						</td>
 						<td className="py-2 text-right">
-						  <div className="font-mono">{btcBalance.toFixed(8)}</div>
+						  <div className="">{btcBalance.toFixed(8)}</div>
 						  <div className="text-gray-400 text-xs">
 							${(btcBalance * btcPrice).toFixed(2)} USDT
 						  </div>
@@ -214,7 +214,7 @@ useEffect(() => {
 						  </div>
 						</td>
 						<td className="py-2 text-right">
-						  <div className="font-mono">{solBalance.toFixed(8)}</div>
+						  <div className="">{solBalance.toFixed(8)}</div>
 						  <div className="text-gray-400 text-xs">
 							${(solBalance * solPrice).toFixed(2)} USDT
 						  </div>

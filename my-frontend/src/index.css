@@ -1,3 +1,31 @@
+@font-face {
+  font-family: 'cyere-bold';
+  src: url('/src/assets/fonts/cyere_bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'cyere-semibold';
+  src: url('/src/assets/fonts/cyere_semibold.otf') format('opentype');
+  font-weight: 600;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'cyere-regular';
+  src: url('/src/assets/fonts/cyere_regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'cyere-italic';
+  src: url('/src/assets/fonts/cyere_italic.otf') format('opentype');
+  font-weight: 400;
+  font-style: italic;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -16,4 +44,43 @@
 }
 .boxshadow{
   box-shadow: #0003 0 4px 6px -1px, #0000001f 0 2px 4px -1px;
+}
+.topheaderbg{
+  background-image: url("/src/assets/header-bg.png");
+  background-size: auto;
+  background-position: center;
+  background-repeat: no-repeat;
+  min-height:320px;
+}
+.no-padding{
+	padding: 0 0 !important
+}
+body{
+	font-family: 'cyere-semibold';
+	font-size: .875rem;
+}
+.topbarbg{
+	background-color:#1a2c38;
+}
+.sidebarbgtopbar{
+	background-color:#0f212e;
+	box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2),
+            0 4px 6px -2px rgba(0, 0, 0, 0.1);
+}
+.sidebarbg{
+	background-color:#0f212e;
+}
+.sidebarmenubg{
+	background-color:#1a2c38;
+	margin-left: 15px;
+    margin-right: 15px;
+    margin-top: 15px;
+    border-radius: 5px;
+}
+.linemargin{
+	margin-left: 15px;
+    margin-right: 15px;
+}
+.footerbg{
+	background-color:#071d2a;
 }

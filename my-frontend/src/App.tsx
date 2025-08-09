@@ -79,18 +79,19 @@ export default function App() {
         />
       </div>
 
-      {/* Main content */}
-      <div className={`bg-gray-900 text-white min-h-screen pt-16 transition-all duration-300 ${contentPadding}`}>
+      {/* Main content min-h-screen */}
+      <div className={`topbarbg text-white pt-16 transition-all duration-300 ${contentPadding}`}>
         <Routes>
           <Route
             path="/"
             element={
-              <main className="max-w-[1200px] mx-auto p-6 overflow-auto">
-                <h2 className="text-2xl font-semibold mb-4">
+              <main className="p-6 overflow-auto no-padding">
+			  <div className="topheaderbg">
+				</div>
+                <h2 className="max-w-[1200px] mx-auto text-2xl font-semibold mb-4">
                   {isAuthenticated ? `Welcome ${email}` : "Welcome to Stake Clone"}
                 </h2>
-
-                <section className="mb-8">
+                <section className="max-w-[1200px] mx-auto mb-8">
                   <h2 className="text-xl font-semibold mb-4">Continue Playing</h2>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
                     <GameCard title="Roulette" players={632} />
@@ -104,7 +105,7 @@ export default function App() {
                   </div>
                 </section>
 
-                <section>
+                <section className="max-w-[1200px] mx-auto">
                   <h2 className="text-xl font-semibold mb-4">Trending Games</h2>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
                     <GameCard title="Sweet Bonanza" players={1234} />
@@ -125,7 +126,11 @@ export default function App() {
           <Route path="/login" element={<Login />} />
         </Routes>
       </div>
-
+	  
+	  {/* Footer min-h-screen */}
+	  <div className={`footerbg text-white pt-16 transition-all duration-300 ${contentPadding}`}>
+	  
+	  </div>
       {/* Wallet modal */}
       {showWallet && <WalletModal onClose={() => setShowWallet(false)} />}
     </>
