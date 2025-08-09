@@ -85,7 +85,7 @@ export default function App() {
           <Route
             path="/"
             element={
-              <main className="p-6 overflow-auto">
+              <main className="max-w-[1200px] mx-auto p-6 overflow-auto">
                 <h2 className="text-2xl font-semibold mb-4">
                   {isAuthenticated ? `Welcome ${email}` : "Welcome to Stake Clone"}
                 </h2>

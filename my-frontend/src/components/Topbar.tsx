@@ -117,6 +117,8 @@ export default function Topbar({
   }, []);
 
   return (
+  <header className="bg-gray-800 text-white relative z-50 boxshadow">
+    <div className="max-w-[1200px] mx-auto justify-between items-center">
     <header className="flex justify-between items-center bg-gray-800 px-6 py-3 text-white relative z-50">
       {/* LEFT - LOGO */}
       <Link to="/" className="flex items-center text-2xl font-bold z-10 space-x-2">
@@ -318,5 +320,7 @@ export default function Topbar({
         )}
       </div>
     </header>
+	</div>
+  </header>
   );
 }
