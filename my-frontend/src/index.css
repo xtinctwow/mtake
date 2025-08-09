@@ -51,6 +51,7 @@
   background-position: center;
   background-repeat: no-repeat;
   min-height:320px;
+  margin-bottom: 55px;
 }
 .no-padding{
 	padding: 0 0 !important
@@ -83,4 +84,10 @@ body{
 }
 .footerbg{
 	background-color:#071d2a;
+}
+.makeitcenter{
+	text-align:center;
+}
+.mainpadding{
+	padding-bottom: 55px !important;
 }
