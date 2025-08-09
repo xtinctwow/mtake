@@ -7,6 +7,7 @@ import {
   FaExchangeAlt, FaClipboardList, FaCog, FaLightbulb, FaHeadset,
   FaSignOutAlt, FaBell, FaUserCircle, FaSearch
 } from "react-icons/fa";
+import logo from "../assets/cyebe-logo-web.png";
 
 export default function Topbar({
   balance,
@@ -119,7 +120,11 @@ export default function Topbar({
     <header className="flex justify-between items-center bg-gray-800 px-6 py-3 text-white relative z-50">
       {/* LEFT - LOGO */}
       <Link to="/" className="flex items-center text-2xl font-bold z-10 space-x-2">
-        <FaDice className="text-lg mr-2" />CYEBE
+        <img
+    src={logo}
+    alt="CYEBE Logo"
+    className="h-auto w-auto mr-2"
+  />
       </Link>
 
       {/* CENTER - BALANCE & WALLET (only if logged in) */}
