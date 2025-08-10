@@ -94,3 +94,25 @@ body{
 .mybold{
 	font-family: 'cyere-bold';
 }
+.cimgmain{
+	--degrees: 0deg;
+    --percentage: 30%;
+	--border-color: #017aff;
+	--spacing-0-5: calc(.25rem*.5);
+    background: linear-gradient(var(--degrees), transparent var(--percentage), var(--border-color) 100%);
+    padding: var(--spacing-0-5);
+    transition: .3s ease;
+    transition-property: transform, translate, scale, rotate;
+	margin-top: 0;
+}
+.cimgmain2{
+	--degrees: 0deg;
+    --percentage: 30%;
+	--border-color: #00CA51;
+	--spacing-0-5: calc(.25rem*.5);
+    background: linear-gradient(var(--degrees), transparent var(--percentage), var(--border-color) 100%);
+    padding: var(--spacing-0-5);
+    transition: .3s ease;
+    transition-property: transform, translate, scale, rotate;
+	margin-top: 0;
+}

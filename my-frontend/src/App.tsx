@@ -14,6 +14,11 @@ import FacebookButton from "./components/FacebookButton";
 import GoogleButton from "./components/GoogleButton";
 import LineButton from "./components/LineButton";
 import TwitchButton from "./components/TwitchButton";
+import VipProgressCard from "./components/VipProgressCard";
+import {
+  FaBars, FaGift, FaUsers, FaCrown, FaBook, FaShieldAlt, FaHeadset, FaGlobe,
+  FaDice, FaFootballBall, FaChevronDown, FaChevronRight, FaComments
+} from "react-icons/fa";
 
 export default function App() {
   const [balance, setBalance] = useState(0.0);
@@ -21,15 +26,15 @@ export default function App() {
   const [showWallet, setShowWallet] = useState(false);
   const isAuthenticated = !!token;
 
-  const desktopResetQuery = window.matchMedia("(max-width:800 && min-width: 100%)");
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => window.innerWidth < 800);
-  const [isSidebarVisible, setIsSidebarVisible] = useState(() => window.innerWidth >= 600);
+  const desktopResetQuery = window.matchMedia("(max-width:1200 && min-width: 100%)");
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => window.innerWidth < 1200);
+  const [isSidebarVisible, setIsSidebarVisible] = useState(() => window.innerWidth >= 800);
   const [userToggledSidebar, setUserToggledSidebar] = useState(false);
 
   // Handle screen resize
   useEffect(() => {
-  const collapseQuery = window.matchMedia("(max-width: 799px)");
-  const hideQuery = window.matchMedia("(max-width: 599px)");
+  const collapseQuery = window.matchMedia("(max-width: 1299px)");
+  const hideQuery = window.matchMedia("(max-width: 799px)");
 
   const handleResize = () => {
     const shouldCollapse = collapseQuery.matches;
@@ -93,29 +98,193 @@ export default function App() {
               <main className="mainpadding p-6 overflow-auto no-padding">
 			  <div className="topheaderbg">
 				  {isAuthenticated ? (
-					<h2 className="max-w-[1200px] px-6 mx-auto text-2xl mb-4">
-					  Welcome {email}
-					</h2>
+					
+					
+					<>
+				 <div className="max-w-[1200px] px-6 mx-auto mb-4 grid md:grid-cols-3 gap-6 py-10 [@media(max-width:767px)]:md:grid-cols-1 [@media(min-width:1px)_and_(max-width:767px)]:justify-center [@media(min-width:1px)_and_(max-width:767px)]:flex [@media(min-width:1px)_and_(max-width:767px)]:text-center">
+				  {/* Column 1 */}
+				  <div>
+					{/*<h2 className="font-bold leading-[120%] text-left text-3xl mybold [@media(min-width:1316px)]:mb-8 [@media(min-width:1300px)]:mb-5 [@media(max-width:1299px)]:mb-5 [@media(max-width:987px)]:mb-0 [@media(min-width:1px)_and_(max-width:767px)]:mb-8 [@media(min-width:1px)_and_(max-width:767px)]:text-center">
+					  Welcome<br />{email}
+					</h2>*/}
+					<div className="flex flex-col justify-center w-full h-full">
+					<VipProgressCard
+  username={email}
+  level="Bronze"
+  wager={8420}
+  nextLevelTarget={100000}
+  isFavorite
+/></div>
+				  </div>
+
+				   {/* Column 2 */}
+  <div className="flex items-center justify-center gradient-border rounded-lg w-full hover:-translate-y-2 transition-transform duration-200 overflow-hidden cimgmain [@media(max-width:767px)]:hidden">
+  <a
+    href="/casino/home"
+    className="flex flex-col w-full bg-gray-900 rounded-md overflow-hidden"
+  >
+    {/* Image */}
+    <div className="w-full overflow-hidden">
+      <img
+        src="/casino.jpg"
+        alt="Casino"
+        className="w-full h-[230px] object-cover block"
+      />
+    </div>
+
+    {/* Text Section */}
+    <div className="py-3 px-4 text-left">
+      <div className="flex justify-between items-center gap-1.5">
+        {/* Left: Shield Icon + Label */}
+        <span className="flex items-center font-bold gap-2">
+          <FaDice size={16} />
+          Casino
+        </span>
+
+        {/* Right: Online indicator + Count */}
+        <div className="flex items-center gap-1.5">
+          <div className="bg-green-400 w-1.5 h-1.5 rounded-full"></div>
+          <span className="font-semibold text-sm">48,158</span>
+        </div>
+      </div>
+    </div>
+  </a>
+</div>
+
+  {/* Column 3 */}
+  <div className="flex items-center justify-center gradient-border rounded-lg w-full hover:-translate-y-2 transition-transform duration-200 overflow-hidden cimgmain2 [@media(max-width:767px)]:hidden">
+  <a
+    href="/sports/home"
+    className="flex flex-col w-full bg-gray-900 rounded-md overflow-hidden"
+  >
+    {/* Image */}
+    <div className="w-full overflow-hidden">
+      <img
+        src="/sports.jpg"
+        alt="sports"
+        className="w-full h-[230px] object-cover block"
+      />
+    </div>
+
+    {/* Text Section */}
+    <div className="py-3 px-4 text-left">
+      <div className="flex justify-between items-center gap-1.5">
+        {/* Left: Shield Icon + Label */}
+        <span className="flex items-center font-bold gap-2">
+          <FaFootballBall size={13} />
+          Sports
+        </span>
+
+        {/* Right: Online indicator + Count */}
+        <div className="flex items-center gap-1.5">
+          <div className="bg-green-400 w-1.5 h-1.5 rounded-full"></div>
+          <span className="font-semibold text-sm">18,158</span>
+        </div>
+      </div>
+    </div>
+  </a>
+</div>
+				</div>
+			</>
+					
+					
+					
+					
 				  ) : (
+				  
+				  
+				  
 				  <>
-				  <div className="max-w-[1200px] px-6 mx-auto mb-4">
-					<h2 className="font-bold leading-[120%] text-left text-3xl py-10 mybold">
-					  World's Best Online<br/>Casino and Sportsbook
+				 <div className="max-w-[1200px] px-6 mx-auto mb-4 grid md:grid-cols-3 gap-6 py-10 [@media(max-width:767px)]:md:grid-cols-1 [@media(min-width:1px)_and_(max-width:767px)]:justify-center [@media(min-width:1px)_and_(max-width:767px)]:flex [@media(min-width:1px)_and_(max-width:767px)]:text-center">
+				  {/* Column 1 */}
+				  <div>
+					<h2 className="font-bold leading-[120%] text-left text-3xl mybold [@media(min-width:1316px)]:mb-8 [@media(min-width:1300px)]:mb-5 [@media(max-width:1299px)]:mb-5 [@media(max-width:987px)]:mb-0 [@media(min-width:1px)_and_(max-width:767px)]:mb-8 [@media(min-width:1px)_and_(max-width:767px)]:text-center">
+					  World's Best Online<br />Casino and Sportsbook
 					</h2>
 					<Link
-              to="/register"
-              className="bg-blue-600 hover:bg-blue-700 rounded px-4 py-3"
-            >
-              Register
-            </Link>
-			<p className="pb-2 pt-10">Sign up with:</p>
-			<div className="flex gap-1.5">
-			  <FacebookButton onClick={() => console.log("FB clicked")} />
-			  <GoogleButton onClick={() => console.log("Google clicked")} />
-			  <LineButton onClick={() => console.log("Line clicked")} />
-			  <TwitchButton onClick={() => console.log("Twitch clicked")} />
-			</div>
-			</div>
+					  to="/register"
+					  className="bg-blue-600 hover:bg-blue-700 rounded px-4 py-3 inline-block"
+					>
+					  Register
+					</Link>
+
+					<p className="pb-2 pt-0 [@media(min-width:988px)]:pt-7 [@media(min-width:1px)_and_(max-width:767px)]:pt-7">Sign up with:</p>
+					<div className="flex gap-1.5 flex-wrap [@media(min-width:1px)_and_(max-width:767px)]:justify-center">
+					  <FacebookButton onClick={() => console.log("FB clicked")} />
+					  <GoogleButton onClick={() => console.log("Google clicked")} />
+					  <LineButton onClick={() => console.log("Line clicked")} />
+					  <TwitchButton onClick={() => console.log("Twitch clicked")} />
+					</div>
+				  </div>
+
+				   {/* Column 2 */}
+  <div className="flex items-center justify-center gradient-border rounded-lg w-full hover:-translate-y-2 transition-transform duration-200 overflow-hidden cimgmain [@media(max-width:767px)]:hidden">
+  <a
+    href="/casino/home"
+    className="flex flex-col w-full bg-gray-900 rounded-md overflow-hidden"
+  >
+    {/* Image */}
+    <div className="w-full overflow-hidden">
+      <img
+        src="/casino.jpg"
+        alt="Casino"
+        className="w-full h-[230px] object-cover block"
+      />
+    </div>
+
+    {/* Text Section */}
+    <div className="py-3 px-4 text-left">
+      <div className="flex justify-between items-center gap-1.5">
+        {/* Left: Shield Icon + Label */}
+        <span className="flex items-center font-bold gap-2">
+          <FaDice size={16} />
+          Casino
+        </span>
+
+        {/* Right: Online indicator + Count */}
+        <div className="flex items-center gap-1.5">
+          <div className="bg-green-400 w-1.5 h-1.5 rounded-full"></div>
+          <span className="font-semibold text-sm">48,158</span>
+        </div>
+      </div>
+    </div>
+  </a>
+</div>
+
+  {/* Column 3 */}
+  <div className="flex items-center justify-center gradient-border rounded-lg w-full hover:-translate-y-2 transition-transform duration-200 overflow-hidden cimgmain2 [@media(max-width:767px)]:hidden">
+  <a
+    href="/sports/home"
+    className="flex flex-col w-full bg-gray-900 rounded-md overflow-hidden"
+  >
+    {/* Image */}
+    <div className="w-full overflow-hidden">
+      <img
+        src="/sports.jpg"
+        alt="sports"
+        className="w-full h-[230px] object-cover block"
+      />
+    </div>
+
+    {/* Text Section */}
+    <div className="py-3 px-4 text-left">
+      <div className="flex justify-between items-center gap-1.5">
+        {/* Left: Shield Icon + Label */}
+        <span className="flex items-center font-bold gap-2">
+          <FaFootballBall size={13} />
+          Sports
+        </span>
+
+        {/* Right: Online indicator + Count */}
+        <div className="flex items-center gap-1.5">
+          <div className="bg-green-400 w-1.5 h-1.5 rounded-full"></div>
+          <span className="font-semibold text-sm">18,158</span>
+        </div>
+      </div>
+    </div>
+  </a>
+</div>
+				</div>
 			</>
 				  )}
 			  </div>

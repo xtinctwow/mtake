@@ -12,7 +12,7 @@ export default function GoogleButton({
 }: Props) {
   const sizes = {
     sm: "h-10 w-10 p-2",
-    md: "h-12 w-12 p-2.5",
+    md: "h-12 w-12 p-2.5 [@media(min-width:768px)_and_(max-width:820px)]:h-10 [@media(min-width:768px)_and_(max-width:820px)]:w-10",
     lg: "h-14 w-14 p-3",
   }[size]
 
