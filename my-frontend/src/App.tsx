@@ -175,7 +175,7 @@ export default function App() {
                   <li>Poker</li>
                   <li>Publishers</li>
                   <li>Promos & Competitions</li>
-                  <li>Stake Engine</li>
+                  <li>Cyebe Engine</li>
                 </ul>
               </div>
 
@@ -241,7 +241,7 @@ export default function App() {
                   <li>Online Casino Guide</li>
                   <li>Sports Betting Guide</li>
                   <li>How to Live Stream Sports</li>
-                  <li>Stake VIP Guide</li>
+                  <li>Cyebe VIP Guide</li>
                   <li>House Edge Guide</li>
                 </ul>
               </div>
