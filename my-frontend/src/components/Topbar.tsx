@@ -237,7 +237,7 @@ export default function Topbar({
         ) : (
           <>
             {/* Search Icon */}
-            <button title="Search" className="flex items-center justify-center text-xl leading-none hover:text-blue-400">
+            <button title="Search" className="flex items-center justify-center text-xl leading-none hover:text-blue-400 [@media(min-width:1px)_and_(max-width:500px)]:hidden">
 			  <FaSearch />
 			</button>
 
