@@ -17,7 +17,7 @@ model User {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @default(now()) @updatedAt
   transactions Transaction[]
-  diceRounds   DiceRound[]
+  diceRounds   DiceRound[] // ✅ opposite side of relation
 }
 
 model Transaction {
@@ -57,14 +57,17 @@ model Price {
 
 model DiceRound {
   id             String   @id @default(cuid())
-  user           User?    @relation(fields: [userId], references: [id])
-  userId         Int?
+  userId         Int? // ✅ matches User.id type
+  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   bet            Float
-  mode           String
+  mode           String // or enum if you prefer
   chance         Float
   clientSeed     String
   nonce          Int
   serverSeed     String
   serverSeedHash String
   createdAt      DateTime @default(now())
+
+  @@unique([userId, clientSeed, nonce]) // ✅ prevents nonce reuse for same user+clientSeed
+  @@index([userId, clientSeed, createdAt])
 }
