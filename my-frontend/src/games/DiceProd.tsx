@@ -77,8 +77,8 @@ function profitOnWin(bet: number, mult: number) { return Math.max(0, bet * mult 
 
 // ---------- Defaults - PRODUCTION! ----------
 const DEFAULT_SEEDS = {
-  serverSeed: "DEMO_SERVER_SEED_DO_NOT_USE_IN_PROD",
-  clientSeed: "client-1",
+  serverSeed: "",
+  clientSeed: "",
   nonce: 1,
 };
 
