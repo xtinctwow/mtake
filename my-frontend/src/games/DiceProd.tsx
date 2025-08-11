@@ -203,6 +203,13 @@ async function startRound() {
     if (onPlaceBet) {
       try {
         const resp = await onPlaceBet(bet, { mode, chance }, newSeeds);
+        if (resp?.clientSeed && resp?.nonce) {
+          setSeeds((prev) => ({
+            ...prev,
+            clientSeed: resp.clientSeed,
+            nonce: resp.nonce,
+          }));
+        }
         rid = resp?.roundId ?? null;
         hash = resp?.serverSeedHash ?? "";
       } catch (e) { console.warn("onPlaceBet failed; demo mode.", e); }
