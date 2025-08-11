@@ -18,6 +18,7 @@ import VipProgressCard from "./components/VipProgressCard";
 import MinesGame from "./games/Mines.tsx";
 import MinesGame2 from "./games/Mines2.tsx";
 import DiceGame from "./games/Dice.tsx";
+import DiceProd from "./games/DiceProd.tsx";
 import {
   FaBars, FaGift, FaUsers, FaCrown, FaBook, FaShieldAlt, FaHeadset, FaGlobe,
   FaDice, FaFootballBall, FaChevronDown, FaChevronRight, FaComments
@@ -328,6 +329,7 @@ export default function App() {
 		  <Route path="casino/games/mines" element={ <div className="flex"> <MinesGame /> </div> } />
 		  <Route path="casino/games/mines2" element={ <div className="flex"> <MinesGame2 /> </div> } />
 		  <Route path="casino/games/dice" element={ <div className="flex"> <DiceGame /> </div> } />
+		  <Route path="casino/games/diceprod" element={ <div className="flex"> <DiceProd /> </div> } />
         </Routes>
       </div>
 	  
