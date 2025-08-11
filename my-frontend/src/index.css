@@ -116,3 +116,13 @@ body{
     transition-property: transform, translate, scale, rotate;
 	margin-top: 0;
 }
+.dicemarker{
+	margin-left: -26px;
+    margin-top: -12px;
+}
+.dicemarkerpadding{
+	margin-top:55px;
+}
+.customround{
+	border-radius:5px;
+}

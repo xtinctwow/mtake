@@ -15,6 +15,9 @@ import GoogleButton from "./components/GoogleButton";
 import LineButton from "./components/LineButton";
 import TwitchButton from "./components/TwitchButton";
 import VipProgressCard from "./components/VipProgressCard";
+import MinesGame from "./games/Mines.tsx";
+import MinesGame2 from "./games/Mines2.tsx";
+import DiceGame from "./games/Dice.tsx";
 import {
   FaBars, FaGift, FaUsers, FaCrown, FaBook, FaShieldAlt, FaHeadset, FaGlobe,
   FaDice, FaFootballBall, FaChevronDown, FaChevronRight, FaComments
@@ -322,6 +325,9 @@ export default function App() {
           <Route path="/wallet" element={<WalletPage balance={balance} setBalance={setBalance} />} />
           <Route path="/register" element={<Registration />} />
           <Route path="/login" element={<Login />} />
+		  <Route path="casino/games/mines" element={ <div className="flex"> <MinesGame /> </div> } />
+		  <Route path="casino/games/mines2" element={ <div className="flex"> <MinesGame2 /> </div> } />
+		  <Route path="casino/games/dice" element={ <div className="flex"> <DiceGame /> </div> } />
         </Routes>
       </div>
 	  
