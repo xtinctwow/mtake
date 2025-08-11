@@ -48,6 +48,7 @@ function hexToFloat01(hex: string): number {
   const int = parseInt(slice, 16);
   const max = Math.pow(16, slice.length);
   const [profit, setProfit] = useState<number>(0);
+  const [rolling, setRolling] = useState(false);
   return int / max; // [0,1)
 }
 async function* seededRandoms({ serverSeed, clientSeed, nonce }: { serverSeed: string; clientSeed: string; nonce: number; }) {
