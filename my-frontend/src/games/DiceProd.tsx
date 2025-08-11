@@ -137,45 +137,73 @@ export default function DiceGame({
   const [seeds, setSeeds] = useState(DEFAULT_SEEDS);
   const [serverSeedHash, setServerSeedHash] = useState<string>("");
   const [roundId, setRoundId] = useState<string | null>(null);
+  async function startRound() {
+    if (bet < minBet || bet > maxBet) {
+      return alert(`Bet must be between ${minBet} and ${maxBet}.`);
+    }
 
-  const [rolling, setRolling] = useState<boolean>(false);
-  const [result, setResult] = useState<number | null>(null);
-  const [win, setWin] = useState<boolean | null>(null);
-  const [lastRoll, setLastRoll] = useState<number | null>(null);
-  const [lastWin, setLastWin] = useState<boolean | null>(null);
-  
-  const [showMarker, setShowMarker] = useState(false);
-  const markerTimerRef = useRef<NodeJS.Timeout | null>(null);
+    try {
+      // 1️⃣ Pošlji na backend place-bet
+      const placeBetResp = await fetch("/api/dice/place-bet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bet,
+          mode,
+          chance,
+          seeds
+        }),
+      });
 
-  // Recent results pills
-  const [recent, setRecent] = useState<ResultItem[]>([]); // newest first
+      if (!placeBetResp.ok) throw new Error("Place bet failed");
+      const placeData = await placeBetResp.json();
 
-  // Track geometry
-  const barRef = useRef<HTMLDivElement | null>(null);
-  const [barW, setBarW] = useState(0);
-  const THUMB = 32;            // px
-  const BORDER_W = 14;          // px
-  const SIDE_PAD = THUMB / 2 + BORDER_W;
+      // Nastavi nove seede iz backenda
+      setSeeds((prev) => ({
+        ...prev,
+        clientSeed: placeData.clientSeed,
+        nonce: placeData.nonce,
+      }));
 
-  useLayoutEffect(() => {
-    const el = barRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver((entries) => setBarW(entries[0].contentRect.width));
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
+      setRoundId(placeData.roundId);
+      setServerSeedHash(placeData.serverSeedHash);
 
-  const innerWidth = Math.max(0, barW - 2 * SIDE_PAD);
-  const thumbLeftPx = xFromPercent(threshold, innerWidth, SIDE_PAD);
+      setRolling(true);
 
-  const profit = useMemo(() => profitOnWin(bet, mult), [bet, mult]);
+      // 2️⃣ Počakaj za animacijo
+      setTimeout(async () => {
+        // 3️⃣ Resolve klic na backend
+        const resolveResp = await fetch("/api/dice/resolve", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ roundId: placeData.roundId }),
+        });
 
-  // Sync fields when not editing
-  useEffect(() => { if (!editingChance) setChanceField(chance.toFixed(2)); }, [chance, editingChance]);
-  useEffect(() => { if (!editingMult) setMultField(mult.toFixed(4)); }, [mult, editingMult]);
-  useEffect(() => { setMult(multiplierFromWinChance(chance, houseEdge)); }, [chance, houseEdge]);
+        if (!resolveResp.ok) throw new Error("Resolve failed");
+        const resolveData = await resolveResp.json();
 
-  // Gradient (Under: green→red; Over: red→green)
+        if (resolveData.serverSeed) {
+          setSeeds((prev) => ({ ...prev, serverSeed: resolveData.serverSeed }));
+
+          // Izračunaj roll iz pravih podatkov
+          const rollValue = await nextRoll100({
+            clientSeed: placeData.clientSeed,
+            serverSeed: resolveData.serverSeed,
+            nonce: placeData.nonce
+          });
+
+          const didWin = mode === "under" ? rollValue < threshold : rollValue > threshold;
+
+          setLastRoll(rollValue);
+          setLastWin(didWin);
+          setRecent((prev) => [{ v: rollValue, win: didWin }, ...prev].slice(0, 14));
+        }
+      }, 3000);
+    } catch (err) {
+      console.error("Error in startRound:", err);
+      alert("Something went wrong, please try again.");
+    }
+  }
   const trackGradient = useMemo(() => {
     if (mode === "under") {
       return `linear-gradient(to right, ${c.green} 0%, ${c.green} ${threshold}%, ${c.red} ${threshold}%, ${c.red} 100%)`;
