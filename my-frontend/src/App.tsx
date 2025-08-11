@@ -23,6 +23,7 @@ import {
   FaBars, FaGift, FaUsers, FaCrown, FaBook, FaShieldAlt, FaHeadset, FaGlobe,
   FaDice, FaFootballBall, FaChevronDown, FaChevronRight, FaComments
 } from "react-icons/fa";
+import FairnessPage from "./pages/FairnessPage";
 
 export default function App() {
   const [balance, setBalance] = useState(0.0);
