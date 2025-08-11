@@ -198,7 +198,15 @@ async function startRound() {
     return alert(`Bet must be between ${minBet} and ${maxBet}.`);
   }
 
+  // Pripravi nove seeds
   const newSeeds = { ...seeds, nonce: Number(seeds.nonce) || 1 };
+
+  // Če serverSeed še ni nastavljen, ga ustvari (demo fallback)
+  if (!newSeeds.serverSeed) {
+    newSeeds.serverSeed = crypto.getRandomValues(new Uint8Array(32))
+      .reduce((acc, val) => acc + val.toString(16).padStart(2, "0"), "");
+  }
+
   setSeeds(newSeeds);
 
   let rid: string | null = null;
@@ -220,6 +228,7 @@ async function startRound() {
       console.warn("onPlaceBet failed; demo mode.", e);
     }
   } else {
+    // Demo način – hash iz local serverSeed
     const digest = await crypto.subtle.digest(
       "SHA-256",
       new TextEncoder().encode(newSeeds.serverSeed)
@@ -231,6 +240,8 @@ async function startRound() {
   setServerSeedHash(hash);
 
   setRolling(true);
+
+  // Izračunaj roll
   const roll = await nextRoll100(newSeeds);
   const didWin = mode === "under" ? roll < threshold : roll > threshold;
 
@@ -244,6 +255,7 @@ async function startRound() {
   // update recent pills (newest first), cap to 14 like Stake-ish
   setRecent((prev) => [{ v: roll, win: didWin }, ...prev].slice(0, 14));
 
+  // Resolve runde v produkciji
   if (onResolve && rid) {
     try {
       const res = await onResolve(rid);
@@ -254,6 +266,7 @@ async function startRound() {
       console.error("onResolve failed", e);
     }
   }
+  setRolling(false);
 }
 
   // Thumb-only dragging (snap to 1; still 2..98)
