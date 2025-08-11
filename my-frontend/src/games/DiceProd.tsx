@@ -1,4 +1,3 @@
-import { useState } from 'react';
 // Added fairness verification state and link
 
 import React, { useEffect, useMemo, useRef, useState, useLayoutEffect } from "react";
