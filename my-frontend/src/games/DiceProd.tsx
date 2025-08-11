@@ -231,7 +231,14 @@ async function startRound() {
 	  clearTimeout(markerTimerRef.current);
 	}
 	markerTimerRef.current = setTimeout(() => {
-	  setShowMarker(false);
+    if (onResolve && rid) {
+      try {
+        const res = await onResolve(rid);
+        if (res?.serverSeed) {
+          setSeeds((prev) => ({ ...prev, serverSeed: res.serverSeed }));
+        }
+      } catch {}
+    }
 	}, 3000);
 
     setLastRoll(roll); setLastWin(didWin);
