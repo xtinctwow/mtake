@@ -224,8 +224,14 @@ export default function DiceGame({
     const didWin = mode === "under" ? roll < threshold : roll > threshold;
     await new Promise((r) => setTimeout(r, 350));
     setResult(roll); setWin(didWin); setRolling(false);
+	// Show marker and reset its hide timer
 	setShowMarker(true);
-	setTimeout(() => setShowMarker(false), 2000);
+	if (markerTimerRef.current) {
+	  clearTimeout(markerTimerRef.current);
+	}
+	markerTimerRef.current = setTimeout(() => {
+	  setShowMarker(false);
+	}, 3000);
 
     setLastRoll(roll); setLastWin(didWin);
     // update recent pills (newest first), cap to 14 like Stake-ish
@@ -299,7 +305,7 @@ markerTimerRef.current = setTimeout(() => {
   }
 
   return (
-    <div className="min-h-screen w-full" style={{ backgroundColor: c.appBg, color: c.text }}>
+    <div className="w-full" style={{ backgroundColor: c.appBg, color: c.text }}>
       <div className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8 space-y-4">
         
         <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-4 md:gap-6">
@@ -365,7 +371,7 @@ markerTimerRef.current = setTimeout(() => {
           <div className="rounded-xl p-4 md:p-6 space-y-4" style={{ backgroundColor: c.panel, borderColor: c.border, borderWidth: 1 }}>
 		  {/* Recent results pills */}
 		  <div className="flex flex-col h-full justify-between">
-        <div className="flex flex-wrap gap-2 md:gap-3 items-center">
+        <div className="flex flex-wrap gap-2 md:gap-2 items-center">
 		  {recent.slice(0, 10).map((r, i) => (
 			<div
 			  key={i}
@@ -379,7 +385,11 @@ markerTimerRef.current = setTimeout(() => {
 			>
 			  {r.v.toFixed(2)}
 			</div>
-		  ))}
+		  ))} 
+		  
+		  {recent.length === 0 
+  ? <div className="h-[2.5rem]">No recent bets</div>
+  : null }
 		  
 		</div>
             
