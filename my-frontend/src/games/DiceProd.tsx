@@ -52,6 +52,8 @@ function hexToFloat01(hex: string): number {
   return int / max; // [0,1)
 }
 async function* seededRandoms({ serverSeed, clientSeed, nonce }: { serverSeed: string; clientSeed: string; nonce: number; }) {
+  const [rolling, setRolling] = useState(false);
+  const [profit, setProfit] = useState<number>(0);
   let cursor = 0;
   while (true) {
     const msg = `${serverSeed}:${clientSeed}:${nonce}:${cursor++}`;
