@@ -239,6 +239,12 @@ async function startRound() {
         }
       } catch {}
     }
+        const res = await onResolve(rid);
+        if (res?.serverSeed) {
+          setSeeds((prev) => ({ ...prev, serverSeed: res.serverSeed }));
+        }
+      } catch {}
+    }
       try {
         const res = await onResolve(rid);
         if (res?.serverSeed) {
