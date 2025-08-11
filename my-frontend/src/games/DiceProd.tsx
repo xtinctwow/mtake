@@ -344,7 +344,7 @@ async function startRound() {
               <div className="mt-3">
                 <label className="text-xs" style={{ color: c.subtext }}>Profit on Win</label>
                 <div className="mt-1 flex items-center gap-2">
-                  <input disabled value={profit.toFixed(8)} className="flex-1 rounded-lg px-3 py-2 outline-none text-sm" style={{ backgroundColor: c.panelSoft, borderColor: c.border, borderWidth: 1 }} />
+            value={profitOnWin(bet, mult).toFixed(8)}
                 </div>
               </div>
 
