@@ -1,3 +1,5 @@
+// Added fairness verification state and link
+
 import React, { useEffect, useMemo, useRef, useState, useLayoutEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { RxDragHandleVertical } from "react-icons/rx";
