@@ -194,84 +194,67 @@ export default function DiceGame({
   }
 
 async function startRound() {
-    if (bet < minBet || bet > maxBet) return alert(`Bet must be between ${minBet} and ${maxBet}.`);
-
-    const newSeeds = { ...seeds, nonce: Number(seeds.nonce) || 1 };
-    setSeeds(newSeeds);
-
-    let rid: string | null = null, hash = "";
-    if (onPlaceBet) {
-      try {
-        const resp = await onPlaceBet(bet, { mode, chance }, newSeeds);
-        if (resp?.clientSeed && resp?.nonce) {
-          setSeeds((prev) => ({
-            ...prev,
-            clientSeed: resp.clientSeed,
-            nonce: resp.nonce,
-          }));
-        }
-        rid = resp?.roundId ?? null;
-        hash = resp?.serverSeedHash ?? "";
-      } catch (e) { console.warn("onPlaceBet failed; demo mode.", e); }
-    } else {
-      const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(newSeeds.serverSeed));
-      hash = bufferToHex(digest);
-    }
-    setRoundId(rid);
-    setServerSeedHash(hash);
-
-    setRolling(true);
-    const roll = await nextRoll100(newSeeds);
-    const didWin = mode === "under" ? roll < threshold : roll > threshold;
-    }, 3000);
-
-    setLastRoll(roll);
-    setLastWin(didWin);
-    // update recent pills (newest first), cap to 14 like Stake-ish
-    setRecent((prev) => [{ v: roll, win: didWin }, ...prev].slice(0, 14));
-
-    if (onResolve && rid) {
-      try {
-        const res = await onResolve(rid);
-        if (res?.serverSeed) {
-          setSeeds((prev) => ({ ...prev, serverSeed: res.serverSeed }));
-        }
-      } catch {}
-    }
-      try {
-        const res = await onResolve(rid);
-        if (res?.serverSeed) {
-          setSeeds((prev) => ({ ...prev, serverSeed: res.serverSeed }));
-        }
-      } catch {}
-    }
-        const res = await onResolve(rid);
-        if (res?.serverSeed) {
-          setSeeds((prev) => ({ ...prev, serverSeed: res.serverSeed }));
-        }
-      } catch {}
-    }
-        const res = await onResolve(rid);
-        if (res?.serverSeed) {
-          setSeeds((prev) => ({ ...prev, serverSeed: res.serverSeed }));
-        }
-      } catch {}
-    }
-      try {
-        const res = await onResolve(rid);
-        if (res?.serverSeed) {
-          setSeeds((prev) => ({ ...prev, serverSeed: res.serverSeed }));
-        }
-      } catch {}
-    }
-	}, 3000);
-
-    setLastRoll(roll); setLastWin(didWin);
-    // update recent pills (newest first), cap to 14 like Stake-ish
-    setRecent((prev) => [{ v: roll, win: didWin }, ...prev].slice(0, 14));
-
-    if (onResolve && rid) { try { await onResolve(rid); } catch {} }
+  if (bet < minBet || bet > maxBet) {
+    return alert(`Bet must be between ${minBet} and ${maxBet}.`);
   }
+
+  const newSeeds = { ...seeds, nonce: Number(seeds.nonce) || 1 };
+  setSeeds(newSeeds);
+
+  let rid: string | null = null;
+  let hash = "";
+
+  if (onPlaceBet) {
+    try {
+      const resp = await onPlaceBet(bet, { mode, chance }, newSeeds);
+      if (resp?.clientSeed && resp?.nonce) {
+        setSeeds((prev) => ({
+          ...prev,
+          clientSeed: resp.clientSeed,
+          nonce: resp.nonce,
+        }));
+      }
+      rid = resp?.roundId ?? null;
+      hash = resp?.serverSeedHash ?? "";
+    } catch (e) {
+      console.warn("onPlaceBet failed; demo mode.", e);
+    }
+  } else {
+    const digest = await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(newSeeds.serverSeed)
+    );
+    hash = bufferToHex(digest);
+  }
+
+  setRoundId(rid);
+  setServerSeedHash(hash);
+
+  setRolling(true);
+  const roll = await nextRoll100(newSeeds);
+  const didWin = mode === "under" ? roll < threshold : roll > threshold;
+
+  // marker timeout
+  markerTimerRef.current = setTimeout(() => {
+    setShowMarker(false);
+  }, 3000);
+
+  setLastRoll(roll);
+  setLastWin(didWin);
+  // update recent pills (newest first), cap to 14 like Stake-ish
+  setRecent((prev) => [{ v: roll, win: didWin }, ...prev].slice(0, 14));
+
+  if (onResolve && rid) {
+    try {
+      const res = await onResolve(rid);
+      if (res?.serverSeed) {
+        setSeeds((prev) => ({ ...prev, serverSeed: res.serverSeed }));
+      }
+    } catch (e) {
+      console.error("onResolve failed", e);
+    }
+  }
+}
 
   // Thumb-only dragging (snap to 1; still 2..98)
   function beginDrag(e: React.PointerEvent) {
