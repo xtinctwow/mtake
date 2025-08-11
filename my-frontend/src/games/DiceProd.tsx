@@ -223,16 +223,21 @@ async function startRound() {
     setRolling(true);
     const roll = await nextRoll100(newSeeds);
     const didWin = mode === "under" ? roll < threshold : roll > threshold;
-    await new Promise((r) => setTimeout(r, 350));
-    setResult(roll); setWin(didWin); setRolling(false);
-  }, 3000);
+    }, 3000);
 
-    setLastRoll(roll); 
+    setLastRoll(roll);
     setLastWin(didWin);
     // update recent pills (newest first), cap to 14 like Stake-ish
     setRecent((prev) => [{ v: roll, win: didWin }, ...prev].slice(0, 14));
 
     if (onResolve && rid) {
+      try {
+        const res = await onResolve(rid);
+        if (res?.serverSeed) {
+          setSeeds((prev) => ({ ...prev, serverSeed: res.serverSeed }));
+        }
+      } catch {}
+    }
       try {
         const res = await onResolve(rid);
         if (res?.serverSeed) {
