@@ -56,34 +56,15 @@ model Price {
 }
 
 model DiceRound {
-  id             String   @id @default(uuid())
-  user           User     @relation(fields: [userId], references: [id])
-  userId         Int
-  createdAt      DateTime @default(now())
-
-  // commitment
-  serverSeed     Bytes
-  serverSeedHash String   @unique
-
-  // client inputs
+  id             String   @id @default(cuid())
+  user           User?    @relation(fields: [userId], references: [id])
+  userId         Int?
+  bet            Float
+  mode           String
+  chance         Float
   clientSeed     String
   nonce          Int
-
-  // bet params
-  mode           String   // "over" | "under"
-  chance         Float
-  threshold      Float
-
-  // financials
-  betAmount      Float
-  currency       String
-
-  // resolution
-  roll           Float?
-  win            Boolean?
-  payout         Float?
-  resolvedAt     DateTime?
-
-  // status
-  status         String   @default("open")
+  serverSeed     String
+  serverSeedHash String
+  createdAt      DateTime @default(now())
 }

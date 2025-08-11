@@ -5,6 +5,7 @@ import compression from "compression";
 import authRoutes from "./routes/auth";
 import walletRoutes from "./routes/wallet";
 import { startPriceUpdater } from "./cron/updatePrices";
+import diceRoutes from "./routes/dice";
 
 dotenv.config();
 
@@ -35,6 +36,7 @@ app.options("*", cors());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/wallet", walletRoutes);
+app.use("/api/dice", diceRoutes);
 
 startPriceUpdater();
 
