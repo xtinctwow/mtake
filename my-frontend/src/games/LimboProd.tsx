@@ -54,7 +54,7 @@ export default function LimboProd({
   const c = useMemo(
     () => ({
       appBg: "#1a2c38",
-      panel: "#1a2c38",
+      panel: "#0f212e",
       panelSoft: "#152532",
       border: "#2a4152",
       text: "#d7e1ea",

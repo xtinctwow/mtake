@@ -8,18 +8,19 @@ datasource db {
 }
 
 model User {
-  id           Int           @id @default(autoincrement())
-  email        String        @unique
-  password     String
-  balance      Float         @default(0)
-  btcWallet    BtcWallet?
-  solWallet    SolWallet?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @default(now()) @updatedAt
-  transactions Transaction[]
-  diceRounds   DiceRound[] // ✅ opposite side of relation
-  MinesRound   MinesRound[]
-  LimboRound   LimboRound[]
+  id             Int              @id @default(autoincrement())
+  email          String           @unique
+  password       String
+  balance        Float            @default(0)
+  btcWallet      BtcWallet?
+  solWallet      SolWallet?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @default(now()) @updatedAt
+  transactions   Transaction[]
+  diceRounds     DiceRound[] // ✅ opposite side of relation
+  MinesRound     MinesRound[]
+  LimboRound     LimboRound[]
+  BlackjackRound BlackjackRound[]
 }
 
 model Transaction {
@@ -114,6 +115,31 @@ model LimboRound {
   serverSeedHash String
   currency       String // "BTC" | "SOL"
   createdAt      DateTime @default(now())
+
+  @@unique([userId, clientSeed, nonce])
+  @@index([userId, clientSeed, createdAt])
+}
+
+model BlackjackRound {
+  id     String @id @default(cuid())
+  userId Int?
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  bet      Float // stake za osnovno roko
+  currency String // "BTC" | "SOL"
+
+  // provably fair
+  clientSeed     String
+  nonce          Int
+  serverSeed     String
+  serverSeedHash String
+
+  // rešitev: v JSON shranimo stanje runde
+  // deck = vnaprej deterministično premešan shoe (6 deckov = 312 kart)
+  // drawPtr = kazalec naslednje karte
+  state     Json // { deck:number[], drawPtr:number, hands: Hand[], dealer:number[], active:number, status:"playing"|"settled" }
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([userId, clientSeed, nonce])
   @@index([userId, clientSeed, createdAt])

@@ -12,6 +12,7 @@ import { startPriceUpdater } from "./cron/updatePrices";
 
 import minesRoutes from "./routes/mines";
 import limboRoutes from "./routes/limbo";
+import blackjackRoutes from "./routes/blackjack";
 
 dotenv.config();
 
@@ -52,6 +53,7 @@ app.use("/api/wallet", walletRoutes);                  // keep as-is (public or 
 app.use("/api/dice", authenticateToken, diceRoutes);   // 🔒 protect dice endpoints
 app.use("/api/mines", authenticateToken, minesRoutes);
 app.use("/api/limbo", authenticateToken, limboRoutes);
+app.use("/api/blackjack", authenticateToken, blackjackRoutes);
 
 // Start price updater cron
 startPriceUpdater();

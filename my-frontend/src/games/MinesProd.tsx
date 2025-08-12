@@ -98,7 +98,7 @@ export default function MinesProd({
   const c = useMemo(
     () => ({
       appBg: "#1a2c38",
-      panel: "#1a2c38",
+      panel: "#0f212e",
       panelSoft: "#152532",
       tile: "#213743",
       tileHover: "#2a4152",
