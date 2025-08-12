@@ -19,6 +19,7 @@ import MinesProd from "./games/MinesProd";
 import DiceProd from "./games/DiceProd.tsx";
 import { useCurrency } from "./context/CurrencyContext";
 import LimboPage from "./pages/LimboPage";
+import BlackjackPage from "./pages/BlackjackPage";
 
 import {
   FaBars, FaGift, FaUsers, FaCrown, FaBook, FaShieldAlt, FaHeadset, FaGlobe,
@@ -413,8 +414,8 @@ export default function App() {
                     <GameCard title="Dice" players={2902} img="/dice_originals.jpg" url="/casino/games/dice" />
                     <GameCard title="Mines" players={3849} img="/mines_originals.jpg" url="/casino/games/mines" />
                     <GameCard title="Limbo" players={3849} img="/limbo_originals.jpg" url="/casino/games/limbo" />
+                    <GameCard title="Blackjack" players={632} img="/bj_originals.jpg" url="/casino/games/blackjack" />
                     <GameCard title="Roulette" players={632} />
-                    <GameCard title="Limbo" players={2676} />
                   </div>
                 </section>
 
@@ -424,7 +425,7 @@ export default function App() {
                     <GameCard title="Dice" players={2902} img="/dice_originals.jpg" url="/casino/games/dice" />
                     <GameCard title="Mines" players={3849} img="/mines_originals.jpg" url="/casino/games/mines" />
                     <GameCard title="Limbo" players={3849} img="/limbo_originals.jpg" url="/casino/games/limbo" />
-                    <GameCard title="The Luxe" players={2345} />
+                    <GameCard title="Blackjack" players={632} img="/bj_originals.jpg" url="/casino/games/blackjack" />
                     <GameCard title="Zombie School" players={3456} />
                   </div>
                 </section>
@@ -437,6 +438,7 @@ export default function App() {
 		  <Route path="casino/games/mines" element={<MinesPage />} />
 		  <Route path="casino/games/dice" element={<DiceProdRouteWrapper />} />
 		  <Route path="casino/games/limbo" element={<LimboPage />} />
+		  <Route path="casino/games/blackjack" element={<BlackjackPage />} />
         </Routes>
       </div>
 	  
