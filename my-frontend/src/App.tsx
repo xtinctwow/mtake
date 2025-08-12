@@ -19,11 +19,66 @@ import MinesGame from "./games/Mines.tsx";
 import MinesGame2 from "./games/Mines2.tsx";
 import DiceGame from "./games/Dice.tsx";
 import DiceProd from "./games/DiceProd.tsx";
+import { useCurrency } from "./context/CurrencyContext";
 import {
   FaBars, FaGift, FaUsers, FaCrown, FaBook, FaShieldAlt, FaHeadset, FaGlobe,
   FaDice, FaFootballBall, FaChevronDown, FaChevronRight, FaComments
 } from "react-icons/fa";
 import FairnessPage from "./pages/FairnessPage";
+
+function DiceProdRouteWrapper() {
+  const api = import.meta.env.VITE_API_URL;
+  const { token } = useAuth();
+  const { selectedCurrency } = useCurrency();
+
+  const onPlaceBet = async (
+    bet: number,
+    params: { mode: "over" | "under"; chance: number; currency: "BTC" | "SOL" },
+    seeds: { clientSeed: string; nonce: number }
+  ) => {
+    const res = await fetch(`${api}/api/dice/place-bet`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({
+        bet,
+        mode: params.mode,
+        chance: params.chance,
+        currency: params.currency,
+        seeds: { clientSeed: seeds.clientSeed },
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.message || "place-bet failed");
+    }
+    return res.json();
+  };
+
+  const onResolve = async (roundId: string) => {
+    const res = await fetch(`${api}/api/dice/resolve`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ roundId }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.message || "resolve failed");
+    }
+    return res.json();
+  };
+
+  return (
+    <div className="flex">
+      <DiceProd onPlaceBet={onPlaceBet} onResolve={onResolve} />
+    </div>
+  );
+}
 
 export default function App() {
   const [balance, setBalance] = useState(0.0);
@@ -70,6 +125,7 @@ export default function App() {
 	const sidebarWidth = !isSidebarVisible ? "w-0" : isSidebarCollapsed ? "w-20" : "w-64";
 	const contentPadding = !isSidebarVisible ? "pl-0" : isSidebarCollapsed ? "pl-20" : "pl-64";
 	const topbarLeft = !isSidebarVisible ? "left-0" : isSidebarCollapsed ? "left-20" : "left-64";
+
 
   return (
     <>
@@ -328,9 +384,7 @@ export default function App() {
           <Route path="/register" element={<Registration />} />
           <Route path="/login" element={<Login />} />
 		  <Route path="casino/games/mines" element={ <div className="flex"> <MinesGame /> </div> } />
-		  <Route path="casino/games/mines2" element={ <div className="flex"> <MinesGame2 /> </div> } />
-		  <Route path="casino/games/dice" element={ <div className="flex"> <DiceGame /> </div> } />
-		  <Route path="casino/games/diceprod" element={ <div className="flex"> <DiceProd /> </div> } />
+		  <Route path="casino/games/dice" element={<DiceProdRouteWrapper />} />
         </Routes>
       </div>
 	  

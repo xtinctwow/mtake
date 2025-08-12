@@ -57,17 +57,18 @@ model Price {
 
 model DiceRound {
   id             String   @id @default(cuid())
-  userId         Int? // ✅ matches User.id type
+  userId         Int?
   user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   bet            Float
-  mode           String // or enum if you prefer
+  mode           String
   chance         Float
   clientSeed     String
   nonce          Int
   serverSeed     String
   serverSeedHash String
+  currency       String // "BTC" | "SOL"
   createdAt      DateTime @default(now())
 
-  @@unique([userId, clientSeed, nonce]) // ✅ prevents nonce reuse for same user+clientSeed
+  @@unique([userId, clientSeed, nonce])
   @@index([userId, clientSeed, createdAt])
 }

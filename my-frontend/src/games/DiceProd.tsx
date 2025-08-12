@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef, useState, useLayoutEffect } from "re
 import { motion, AnimatePresence } from "framer-motion";
 import { RxDragHandleVertical } from "react-icons/rx";
 import { FiRefreshCw } from "react-icons/fi";
+import { useCurrency } from "../context/CurrencyContext";
 
 // ---------- Limits ----------
 const MIN_T = 2;
@@ -57,7 +58,8 @@ async function* seededRandoms({
 }) {
   let cursor = 0;
   while (true) {
-    const msg = `${serverSeed}:${clientSeed}:${nonce}:${cursor++}`;
+    const msg = `${serverSeed}:${clientSeed}:${nonce}:0`;
+    {/*const msg = `${serverSeed}:${clientSeed}:${nonce}:${cursor++}`;*/}
     const hex = await hmacSHA256(serverSeed, msg);
     yield hexToFloat01(hex);
   }
@@ -116,18 +118,24 @@ export default function DiceGame({
   maxBet?: number;
   currency?: string;
   onPlaceBet?: (
-    bet: number,
-    params: { mode: "over" | "under"; chance: number },
-    seeds: Seeds
-  ) => Promise<{
-    roundId?: string;
-    serverSeedHash?: string;
-    clientSeed?: string;   // <-- add
-    nonce?: number;        // <-- add
-  } | void>;
-  onResolve?: (roundId: string) => Promise<{ serverSeed: string } | void>;
+  bet: number,
+  params: { mode: "over" | "under"; chance: number; currency: "BTC" | "SOL" },
+  seeds: Seeds
+) => Promise<{
+  roundId?: string;
+  serverSeedHash?: string;
+  clientSeed?: string;
+  nonce?: number;
+} | void>;
+
+onResolve?: (
+  roundId: string
+) => Promise<{ serverSeed: string; roll: number; didWin: boolean; payout: number } | void>;
 }) {
   // Skin
+  
+  const { selectedCurrency, adjustBalance } = useCurrency();
+  
   const c = useMemo(
     () => ({
       appBg: "#1a2c38",
@@ -192,6 +200,8 @@ export default function DiceGame({
   const [betField, setBetField] = useState(minBet.toFixed(8));
   const [editingBet, setEditingBet] = useState(false);
   
+  
+  
   useEffect(() => {
 	  if (!editingBet) setBetField(bet.toFixed(8));
 	}, [bet, editingBet]);
@@ -244,7 +254,7 @@ export default function DiceGame({
     setMode((m) => (m === "under" ? "over" : "under"));
   }
 
-  async function startRound() {
+async function startRound() {
   if (bet < minBet || bet > maxBet) {
     alert(`Bet must be between ${minBet} and ${maxBet}.`);
     return;
@@ -252,10 +262,8 @@ export default function DiceGame({
 
   setRolling(true);
 
-  // 1) Prepare seeds (client-controlled values). Do NOT create serverSeed here.
+  // pripravi seeds (brez serverSeed)
   let seedsForRoll = { ...seeds, nonce: Number(seeds.nonce) || 1 };
-
-  // Ensure we always have a clientSeed so the UI shows something even if server doesn't echo it
   if (!seedsForRoll.clientSeed) {
     seedsForRoll.clientSeed = crypto
       .getRandomValues(new Uint8Array(16))
@@ -267,18 +275,26 @@ export default function DiceGame({
   let hash = "";
 
   try {
-    // 2) Place bet with server (commitment phase)
     if (onPlaceBet) {
-      const resp = await onPlaceBet(bet, { mode, chance }, seedsForRoll);
+      const resp = await onPlaceBet(
+        bet,
+        { mode, chance, currency: selectedCurrency as "BTC" | "SOL" },
+        seedsForRoll
+      );
 
-      // Apply any echoed clientSeed/nonce BEFORE rolling
+      if (resp?.roundId) {
+        // rezervacija balance (takoj po uspešnem place-bet)
+        adjustBalance(selectedCurrency, -bet);
+      }
+
+      // server lahko vrne potrjen clientSeed/nonce
       if (resp?.clientSeed || resp?.nonce) {
         seedsForRoll = {
           ...seedsForRoll,
           clientSeed: resp?.clientSeed ?? seedsForRoll.clientSeed,
           nonce: resp?.nonce ?? seedsForRoll.nonce,
         };
-        setSeeds(prev => ({
+        setSeeds((prev) => ({
           ...prev,
           clientSeed: seedsForRoll.clientSeed,
           nonce: seedsForRoll.nonce,
@@ -288,67 +304,82 @@ export default function DiceGame({
       rid = resp?.roundId ?? null;
       hash = resp?.serverSeedHash ?? "";
     } else {
-      // Demo mode: fake a commitment hash from a temp serverSeed just for UX
+      // demo fallback: samo commitment hash
       const tmpServerSeed = crypto
         .getRandomValues(new Uint8Array(32))
         .reduce((acc, v) => acc + v.toString(16).padStart(2, "0"), "");
-      const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(tmpServerSeed));
+      const digest = await crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(tmpServerSeed)
+      );
       hash = bufferToHex(digest);
     }
 
     setRoundId(rid);
     setServerSeedHash(hash);
 
-    // 3) Reveal phase: ask server for serverSeed, then compute roll locally to verify
-    let serverSeedToUse: string | null = null;
-
+    // reveal/outcome faza
     if (onResolve && rid) {
       try {
         const res = await onResolve(rid);
-        if (res?.serverSeed) serverSeedToUse = res.serverSeed;
-        // also stash it so the user can verify later
-        if (serverSeedToUse) {
-          setSeeds(prev => ({ ...prev, serverSeed: serverSeedToUse! }));
+
+        // pokaži serverSeed v UI za fairness
+        if (res?.serverSeed) {
+          setSeeds((prev) => ({ ...prev, serverSeed: res.serverSeed }));
+        }
+
+        // roll/didWin/payout iz backend-a (zaupamo serverju za prikaz)
+        if (typeof (res as any)?.roll === "number") {
+          const rolled = (res as any).roll as number;
+          const didWin = !!(res as any).didWin;
+
+          // marker + recent pills
+          setShowMarker(true);
+          if (markerTimerRef.current) clearTimeout(markerTimerRef.current);
+          markerTimerRef.current = setTimeout(() => setShowMarker(false), 3000);
+
+          setLastRoll(rolled);
+          setLastWin(didWin);
+          setRecent((prev) => [{ v: rolled, win: didWin }, ...prev].slice(0, 14));
+
+          // payout v UI
+          if (didWin && (res as any).payout > 0) {
+            adjustBalance(selectedCurrency, (res as any).payout);
+          }
+
+          // pomembno: povečaj nonce za naslednjo rundo
+          setSeeds((prev) => ({ ...prev, nonce: prev.nonce + 1 }));
+        } else if (res?.serverSeed) {
+          // fallback: če backend ne bi poslal roll-a (pri tebi ga pošilja),
+          // izračunamo lokalno z istim algoritmom (msg s ":0")
+          const localRoll = await nextRoll100({
+            serverSeed: res.serverSeed,
+            clientSeed: seedsForRoll.clientSeed,
+            nonce: seedsForRoll.nonce,
+          });
+          const didWin =
+            mode === "under" ? localRoll < threshold : localRoll > threshold;
+
+          setShowMarker(true);
+          if (markerTimerRef.current) clearTimeout(markerTimerRef.current);
+          markerTimerRef.current = setTimeout(() => setShowMarker(false), 3000);
+
+          setLastRoll(localRoll);
+          setLastWin(didWin);
+          setRecent((prev) => [{ v: localRoll, win: didWin }, ...prev].slice(0, 14));
+          setSeeds((prev) => ({ ...prev, nonce: prev.nonce + 1 }));
         }
       } catch (e) {
         console.error("onResolve failed", e);
       }
     }
-
-    // If no backend, fall back to a local serverSeed so the demo still rolls
-    if (!serverSeedToUse) {
-      // DEMO ONLY
-      serverSeedToUse =
-        seedsForRoll.serverSeed && seedsForRoll.serverSeed.length > 0
-          ? seedsForRoll.serverSeed
-          : crypto
-              .getRandomValues(new Uint8Array(32))
-              .reduce((acc, v) => acc + v.toString(16).padStart(2, "0"), "");
-      setSeeds(prev => ({ ...prev, serverSeed: serverSeedToUse! }));
-    }
-
-    // 4) Now we can compute the roll deterministically
-    const roll = await nextRoll100({
-      serverSeed: serverSeedToUse!,
-      clientSeed: seedsForRoll.clientSeed,
-      nonce: seedsForRoll.nonce,
-    });
-    const didWin = mode === "under" ? roll < threshold : roll > threshold;
-
-    // UI updates
-    setShowMarker(true);
-    if (markerTimerRef.current) clearTimeout(markerTimerRef.current);
-    markerTimerRef.current = setTimeout(() => setShowMarker(false), 3000);
-
-    setLastRoll(roll);
-    setLastWin(didWin);
-    setRecent(prev => [{ v: roll, win: didWin }, ...prev].slice(0, 14));
-
-    // 5) IMPORTANT: bump nonce so next round changes the tuple
-    setSeeds(prev => ({ ...prev, nonce: prev.nonce + 1 }));
-  } catch (err) {
+  } catch (err: any) {
     console.warn("startRound error:", err);
-    alert("Bet failed. Please try again.");
+    if (err?.message?.toLowerCase?.().includes("insufficient")) {
+      alert("Insufficient balance.");
+    } else {
+      alert("Bet failed. Please try again.");
+    }
   } finally {
     setRolling(false);
   }
@@ -430,15 +461,24 @@ export default function DiceGame({
               <div className="mt-4 grid grid-cols-1 gap-3">
                 <div>
                   <label className="text-xs" style={{ color: c.subtext }}>Client seed</label>
-                  <input readOnly type="text" value={seeds.clientSeed} onChange={(e) => setSeeds((s) => ({ ...s, clientSeed: e.target.value }))} className="mt-1 w-full rounded-lg px-3 py-2 outline-none text-sm" style={{ backgroundColor: c.panelSoft, borderColor: c.border, borderWidth: 1 }} />
+                  <input readOnly type="text" value={seeds.clientSeed}
+  className="mt-1 w-full rounded-lg px-3 py-2 outline-none text-sm"
+  style={{ backgroundColor: c.panelSoft, borderColor: c.border, borderWidth: 1 }}
+/>
                 </div>
                 <div>
                   <label className="text-xs" style={{ color: c.subtext }}>Nonce</label>
-                  <input readOnly type="number" min={1} value={seeds.nonce} onChange={(e) => setSeeds((s) => ({ ...s, nonce: Number(e.target.value) }))} className="mt-1 w-full rounded-lg px-3 py-2 outline-none text-sm" style={{ backgroundColor: c.panelSoft, borderColor: c.border, borderWidth: 1 }} />
+                  <input readOnly type="number" min={1} value={seeds.nonce}
+  className="mt-1 w-full rounded-lg px-3 py-2 outline-none text-sm"
+  style={{ backgroundColor: c.panelSoft, borderColor: c.border, borderWidth: 1 }}
+/>
                 </div>
                 <div>
                   <label className="text-xs" style={{ color: c.subtext }}>Server seed</label>
-                  <input readOnly type="text" value={seeds.serverSeed} onChange={(e) => setSeeds((s) => ({ ...s, serverSeed: e.target.value }))} className="mt-1 w-full rounded-lg px-3 py-2 outline-none text-sm" style={{ backgroundColor: c.panelSoft, borderColor: c.border, borderWidth: 1 }} />
+                  <input readOnly type="text" value={seeds.serverSeed}
+  className="mt-1 w-full rounded-lg px-3 py-2 outline-none text-sm"
+  style={{ backgroundColor: c.panelSoft, borderColor: c.border, borderWidth: 1 }}
+/>
                 </div>
               </div>
 
