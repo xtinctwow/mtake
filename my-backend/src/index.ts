@@ -10,6 +10,9 @@ import diceRoutes from "./routes/dice";
 import { authenticateToken } from "./middleware/auth";
 import { startPriceUpdater } from "./cron/updatePrices";
 
+import minesRoutes from "./routes/mines";
+import limboRoutes from "./routes/limbo";
+
 dotenv.config();
 
 const app = express();
@@ -47,6 +50,8 @@ app.options("*", cors());
 app.use("/api/auth", authRoutes);
 app.use("/api/wallet", walletRoutes);                  // keep as-is (public or protect if you want)
 app.use("/api/dice", authenticateToken, diceRoutes);   // 🔒 protect dice endpoints
+app.use("/api/mines", authenticateToken, minesRoutes);
+app.use("/api/limbo", authenticateToken, limboRoutes);
 
 // Start price updater cron
 startPriceUpdater();

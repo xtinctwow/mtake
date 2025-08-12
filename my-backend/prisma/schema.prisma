@@ -18,6 +18,8 @@ model User {
   updatedAt    DateTime      @default(now()) @updatedAt
   transactions Transaction[]
   diceRounds   DiceRound[] // ✅ opposite side of relation
+  MinesRound   MinesRound[]
+  LimboRound   LimboRound[]
 }
 
 model Transaction {
@@ -62,6 +64,50 @@ model DiceRound {
   bet            Float
   mode           String
   chance         Float
+  clientSeed     String
+  nonce          Int
+  serverSeed     String
+  serverSeedHash String
+  currency       String // "BTC" | "SOL"
+  createdAt      DateTime @default(now())
+
+  @@unique([userId, clientSeed, nonce])
+  @@index([userId, clientSeed, createdAt])
+}
+
+model MinesRound {
+  id     String @id @default(cuid())
+  userId Int?
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  bet            Float
+  currency       String // "BTC" | "SOL"
+  mines          Int
+  clientSeed     String
+  nonce          Int
+  serverSeed     String
+  serverSeedHash String
+
+  // state
+  status       String @default("live") // "live" | "bust" | "cashed"
+  safeRevealed Int    @default(0)
+  revealed     Int[]  @default([]) // indeksi že kliknjenih polj (0..24)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, clientSeed, nonce])
+  @@index([userId, clientSeed, createdAt])
+}
+
+model LimboRound {
+  id     String @id @default(cuid())
+  userId Int?
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  bet            Float
+  target         Float // ciljni multiplikator
+  resultMult     Float? // dejanski “rolled” multiplier (po resolve)
   clientSeed     String
   nonce          Int
   serverSeed     String
