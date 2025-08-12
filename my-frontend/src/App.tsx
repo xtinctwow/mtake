@@ -15,16 +15,73 @@ import GoogleButton from "./components/GoogleButton";
 import LineButton from "./components/LineButton";
 import TwitchButton from "./components/TwitchButton";
 import VipProgressCard from "./components/VipProgressCard";
-import MinesGame from "./games/Mines.tsx";
-import MinesGame2 from "./games/Mines2.tsx";
-import DiceGame from "./games/Dice.tsx";
+import MinesProd from "./games/MinesProd";
 import DiceProd from "./games/DiceProd.tsx";
 import { useCurrency } from "./context/CurrencyContext";
+import LimboPage from "./pages/LimboPage";
+
 import {
   FaBars, FaGift, FaUsers, FaCrown, FaBook, FaShieldAlt, FaHeadset, FaGlobe,
   FaDice, FaFootballBall, FaChevronDown, FaChevronRight, FaComments
 } from "react-icons/fa";
 import FairnessPage from "./pages/FairnessPage";
+
+function MinesPage() {
+  const api = import.meta.env.VITE_API_URL;
+  const { token } = useAuth();
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+
+  const onPlaceBet = (
+    bet: number,
+    params: { mines: number; currency: "BTC" | "SOL" },
+    seeds: { clientSeed: string; nonce: number }
+  ) =>
+    fetch(`${api}/api/mines/place-bet`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        bet,
+        mines: params.mines,
+        currency: params.currency,            // <- pride iz MinesProd (selectedCurrency)
+        seeds: { clientSeed: seeds.clientSeed }
+      }),
+    }).then(async (r) =>
+      r.ok ? r.json() : Promise.reject(await r.json().catch(() => ({ message: "place-bet failed" })))
+    );
+
+  const onReveal = (roundId: string, index: number) =>
+    fetch(`${api}/api/mines/reveal`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ roundId, index }),
+    }).then(async (r) =>
+      r.ok ? r.json() : Promise.reject(await r.json().catch(() => ({ message: "reveal failed" })))
+    );
+
+  const onCashout = (roundId: string, _safeRevealed: number) =>
+    fetch(`${api}/api/mines/cashout`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ roundId }),
+    }).then(async (r) =>
+      r.ok ? r.json() : Promise.reject(await r.json().catch(() => ({ message: "cashout failed" })))
+    );
+
+  return (
+    <MinesProd
+      onPlaceBet={onPlaceBet}
+      onReveal={onReveal}
+      onCashout={onCashout}
+      minBet={0}      // podpira "free roll"
+      maxBet={1000}
+      houseEdge={0.01}
+    />
+  );
+}
 
 function DiceProdRouteWrapper() {
   const api = import.meta.env.VITE_API_URL;
@@ -352,29 +409,23 @@ export default function App() {
                 
                 <section className="max-w-[1200px] px-6 mx-auto mb-8">
                   <h2 className="text-xl font-semibold mb-4">Continue Playing</h2>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-5 gap-4">
+                    <GameCard title="Dice" players={2902} img="/dice_originals.jpg" url="/casino/games/dice" />
+                    <GameCard title="Mines" players={3849} img="/mines_originals.jpg" url="/casino/games/mines" />
+                    <GameCard title="Limbo" players={3849} img="/limbo_originals.jpg" url="/casino/games/limbo" />
                     <GameCard title="Roulette" players={632} />
                     <GameCard title="Limbo" players={2676} />
-                    <GameCard title="Dice" players={2902} />
-                    <GameCard title="Mines" players={3849} />
-                    <GameCard title="Dragon Tower" players={892} />
-                    <GameCard title="Roulette Live" players={118} />
-                    <GameCard title="Wheel" players={401} />
-                    <GameCard title="Mega Roulette" players={22} />
                   </div>
                 </section>
 
                 <section className="max-w-[1200px] px-6 mx-auto">
                   <h2 className="text-xl font-semibold mb-4">Trending Games</h2>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-                    <GameCard title="Sweet Bonanza" players={1234} />
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-5 gap-4">
+                    <GameCard title="Dice" players={2902} img="/dice_originals.jpg" url="/casino/games/dice" />
+                    <GameCard title="Mines" players={3849} img="/mines_originals.jpg" url="/casino/games/mines" />
+                    <GameCard title="Limbo" players={3849} img="/limbo_originals.jpg" url="/casino/games/limbo" />
                     <GameCard title="The Luxe" players={2345} />
                     <GameCard title="Zombie School" players={3456} />
-                    <GameCard title="Super Wildcat" players={4567} />
-                    <GameCard title="Brute Force" players={5678} />
-                    <GameCard title="Win FXF" players={6789} />
-                    <GameCard title="Joker’s Jewels" players={7890} />
-                    <GameCard title="Duel A Dawn" players={8901} />
                   </div>
                 </section>
               </main>
@@ -383,8 +434,9 @@ export default function App() {
           <Route path="/wallet" element={<WalletPage balance={balance} setBalance={setBalance} />} />
           <Route path="/register" element={<Registration />} />
           <Route path="/login" element={<Login />} />
-		  <Route path="casino/games/mines" element={ <div className="flex"> <MinesGame /> </div> } />
+		  <Route path="casino/games/mines" element={<MinesPage />} />
 		  <Route path="casino/games/dice" element={<DiceProdRouteWrapper />} />
+		  <Route path="casino/games/limbo" element={<LimboPage />} />
         </Routes>
       </div>
 	  
