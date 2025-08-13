@@ -30,6 +30,13 @@ export default function BlackjackPage(){
       onSplit={(roundId)=>
         fetch(`${api}/api/blackjack/split`, { method:"POST", headers, body: JSON.stringify({ roundId }) })
         .then(async r=> r.ok ? r.json() : Promise.reject(await r.json().catch(()=>({message:"split failed"}))))}
+      onInsurance={(roundId, take)=>
+  fetch(`${api}/api/blackjack/insurance`, {
+    method:"POST",
+    headers,
+    body: JSON.stringify({ roundId, take }),
+  }).then(async r=> r.ok ? r.json() : Promise.reject(await r.json().catch(()=>({message:"insurance failed"}))))
+}
     />
   );
 }
