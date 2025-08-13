@@ -168,6 +168,18 @@ export default function BlackjackProd({
 
   // global lock za bet/inpute med živo rundo
   const betLocked = rolling || busy || (!!roundId && !roundOver);
+  
+  const [seeds, setSeeds] = useState<{
+	  clientSeed: string;
+	  nonce: number;
+	  serverSeed: string;       // revealed only after settle
+	  serverSeedHash: string;   // commitment shown right after place-bet
+	}>({
+	  clientSeed: "",
+	  nonce: 0,
+	  serverSeed: "",
+	  serverSeedHash: "",
+	});
 
   const clean = () => {
     setRoundId(null);
@@ -197,6 +209,13 @@ export default function BlackjackProd({
         { currency: selectedCurrency as "BTC" | "SOL" },
         { clientSeed: cs, nonce: 1 }
       );
+	  
+	  setSeeds({
+		  clientSeed: resp.clientSeed,
+		  nonce: resp.nonce,
+		  serverSeed: "",                 // not revealed yet
+		  serverSeedHash: resp.serverSeedHash,
+		});
 
       setRoundId(resp.roundId);
       setPlayerHands([resp.player]);
@@ -216,7 +235,7 @@ export default function BlackjackProd({
 	  setBusy(true);
 	  try {
 		const fin = await onStand(resp.roundId);
-		if ("serverSeed" in fin) settle(fin);  // settle ga bo vseeno še enkrat resetiral
+		if ("serverSeed" in fin) settle(fin);		// settle ga bo vseeno še enkrat resetiral
 	  } finally {
 		setBusy(false);
 	  }
@@ -332,7 +351,10 @@ export default function BlackjackProd({
       });
 
       const fin = await onStand(roundId);
-      if ("serverSeed" in fin) settle(fin);
+      if ("serverSeed" in fin) {
+  settle(fin);      // <- this sets seeds.serverSeed for you
+  return;
+}
     } catch (e:any) {
       alert(e?.message || "double failed");
     } finally {
@@ -382,6 +404,7 @@ export default function BlackjackProd({
 	  setHandValues(playerHands.map(scoreHand));
 	  setRoundOver(true);
 	  setCanInsurance(false); 
+	  setSeeds(s => ({ ...s, serverSeed: fin.serverSeed }));
 	  if (fin.totalPayout > 0) adjustBalance(selectedCurrency, fin.totalPayout);
 	}
 	
@@ -524,6 +547,44 @@ export default function BlackjackProd({
             {roundOver ? "Bet Again" : (rolling ? "Dealing…" : betLocked ? "Playing…" : "Bet")}
           </button>
         </div>
+		{/* Seeds */}
+<div className="mt-4 grid grid-cols-1 gap-3">
+  <div>
+    <label className="text-xs" style={{ color: theme.subtext }}>Client seed</label>
+    <input
+      readOnly
+      type="text"
+      value={seeds.clientSeed || "—"}
+      className="mt-1 w-full rounded-lg px-3 py-2 outline-none text-sm"
+      style={{ backgroundColor: theme.panelSoft, borderColor: theme.border, borderWidth: 1 }}
+    />
+  </div>
+  <div>
+    <label className="text-xs" style={{ color: theme.subtext }}>Nonce</label>
+    <input
+      readOnly
+      type="number"
+      min={1}
+      value={seeds.nonce || 0}
+      className="mt-1 w-full rounded-lg px-3 py-2 outline-none text-sm"
+      style={{ backgroundColor: theme.panelSoft, borderColor: theme.border, borderWidth: 1 }}
+    />
+  </div>
+  <div>
+    <label className="text-xs" style={{ color: theme.subtext }}>Server seed</label>
+    <input
+      readOnly
+      type="text"
+      value={seeds.serverSeed || "—"}   // becomes visible after settle
+      className="mt-1 w-full rounded-lg px-3 py-2 outline-none text-sm"
+      style={{ backgroundColor: theme.panelSoft, borderColor: theme.border, borderWidth: 1 }}
+    />
+  </div>
+</div>
+
+<div className="mt-4 text-[11px]" style={{ color: theme.subtext }}>
+  Commitment hash: <span className="font-mono break-all">{seeds.serverSeedHash || "—"}</span>
+</div>
       </div>
     </aside>;
 

@@ -22,10 +22,10 @@ app.set("trust proxy", true);
 app.use(compression());
 
 // Basic request logging
-app.use((req, _res, next) => {
-  console.log(`${req.method} ${req.url} from IP: ${req.ip} / Origin: ${req.headers.origin}`);
-  next();
-});
+//app.use((req, _res, next) => {
+//  console.log(`${req.method} ${req.url} from IP: ${req.ip} / Origin: ${req.headers.origin}`);
+//  next();
+//});
 
 // CORS — allow your web app origins
 app.use(
@@ -39,10 +39,10 @@ app.use(
 app.use(express.json());
 
 // (Optional) second logger—kept from your version
-app.use((req, _res, next) => {
-  console.log(`${req.method} ${req.url} from ${req.headers.origin}`);
-  next();
-});
+//app.use((req, _res, next) => {
+//  console.log(`${req.method} ${req.url} from ${req.headers.origin}`);
+//  next();
+//});
 
 // Enable preflight
 app.options("*", cors());
