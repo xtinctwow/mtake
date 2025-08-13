@@ -34,6 +34,7 @@ type PlaceResp = {
   canSplit: boolean;
   canDouble: boolean;
   blackjack: boolean;
+  canInsurance?: boolean; 
 };
 type Outcome = "win"|"lose"|"push"|"blackjack";
 type SettleResp = {
@@ -44,22 +45,26 @@ type SettleResp = {
   /** optionalno, če backend zaključi takoj po double/hit bust, pošlje še kartico za prikaz */
   playerCard?: number;
 };
-type HitResp    = { card:number; value:number; bust:boolean } | SettleResp;
+// ⬇️ dodan active
+type HitResp    = { card:number; value:number; bust:boolean; active:number } | SettleResp;
 type StandResp  = { ok:true; active:number } | SettleResp;
 type DoubleResp = { card:number; value:number } | SettleResp;
 type SplitResp  = { hands:number[][]; canDouble:boolean };
 
-/* ---------- UI: Card with deal + flip ---------- */
+/* ---------- UI: Card with deal + flip + fan offsets ---------- */
 function Card({
   c,
   revealed = true,
   dealDelay = 0,
+  ml = "0em",
+  mt = "0em",
 }:{
   c: number;
-  revealed?: boolean;   // dealer hole = false, po settle true → flip
-  dealDelay?: number;   // zamik pri deljenju
+  revealed?: boolean;
+  dealDelay?: number;
+  ml?: string;  // horizontal overlap (negativen za fan)
+  mt?: string;  // vertikalni “step”
 }) {
-  // Front face (rank + suit)
   const front = (() => {
     const s = suitOf(c), r = rankOf(c);
     const color = isRed(s) ? "#ff6b6b" : "#e6f0f7";
@@ -82,7 +87,6 @@ function Card({
     );
   })();
 
-  // Back face (hidden)
   const back = (
     <div
       className="absolute inset-0 rounded-xl overflow-hidden border"
@@ -93,7 +97,7 @@ function Card({
         WebkitBackfaceVisibility:"hidden",
       }}
     >
-      <img src="/back-card-none.svg" alt="Hidden card" className="w-full h-full object-cover" />
+      <img src="/back-card-none.png" alt="Hidden card" className="w-full h-full object-cover" />
     </div>
   );
 
@@ -103,7 +107,7 @@ function Card({
       initial={{ y:-18, opacity:0, scale:0.9 }}
       animate={{ y:0, opacity:1, scale:1 }}
       transition={{ type:"spring", stiffness:260, damping:20, delay: dealDelay }}
-      style={{ perspective: 800 }}
+      style={{ perspective: 800, marginLeft: ml, marginTop: mt }}
     >
       <motion.div
         className="absolute inset-0"
@@ -121,7 +125,7 @@ function Card({
 
 /* ---------- Main ---------- */
 export default function BlackjackProd({
-  onPlaceBet, onHit, onStand, onDouble, onSplit,
+  onPlaceBet, onHit, onStand, onDouble, onSplit,onInsurance,
   minBet=0, maxBet=1000,
 }:{
   minBet?:number; maxBet?:number;
@@ -130,11 +134,12 @@ export default function BlackjackProd({
   onStand:(roundId:string)=>Promise<StandResp>;
   onDouble:(roundId:string)=>Promise<DoubleResp|SettleResp>;
   onSplit:(roundId:string)=>Promise<SplitResp>;
+  onInsurance?:(roundId:string, take:boolean)=>Promise<{ok:true;insuranceBet:number}>;
 }) {
   const { selectedCurrency, adjustBalance } = useCurrency();
 
   const theme = useMemo(()=>({
-    appBg:"#0f212e", panel:"#1a2c38", panelSoft:"#152532", border:"#2a4152",
+    appBg:"#1a2c38", panel:"#0f212e", panelSoft:"#152532", border:"#2a4152",
     text:"#d7e1ea", subtext:"#91a3b0", accent:"#00e701", accentText:"#001b0a",
     win:"#0bbf74", lose:"#e25757", push:"#6c7b86",
   }),[]);
@@ -153,6 +158,9 @@ export default function BlackjackProd({
   const [canSplit, setCanSplit] = useState(false);
   const [canDouble, setCanDouble] = useState(false);
   const [roundOver, setRoundOver] = useState(false);
+  const [finalValues, setFinalValues] = useState<number[] | null>(null);
+  const [canInsurance, setCanInsurance] = useState(false);
+  const showInsurance = !!roundId && !roundOver && canInsurance;
 
   // ux locks
   const [rolling, setRolling] = useState(false);
@@ -171,6 +179,8 @@ export default function BlackjackProd({
     setCanSplit(false);
     setCanDouble(false);
     setRoundOver(false);
+	setFinalValues(null);
+	setCanInsurance(false);
   };
 
   /* -------- PLACE (auto-resolve blackjack) -------- */
@@ -194,22 +204,23 @@ export default function BlackjackProd({
       setDealer([resp.dealerUp, -1]);
       setCanSplit(resp.canSplit);
       setCanDouble(resp.canDouble);
+	  setCanInsurance(!!resp.canInsurance);
       setOutcomes([null]);
       setActive(0);
       setRoundOver(false);
 
-      if (bet > 0) adjustBalance(selectedCurrency, -bet); // rezervacija
+      if (bet > 0) adjustBalance(selectedCurrency, -bet);
 
-      // auto-resolve na natural blackjack
       if (resp.blackjack) {
-        setBusy(true);
-        try {
-          const fin = await onStand(resp.roundId);
-          if ("serverSeed" in fin) settle(fin);
-        } finally {
-          setBusy(false);
-        }
-      }
+	  setCanInsurance(false);      // ⬅️ skrij Insurance takoj
+	  setBusy(true);
+	  try {
+		const fin = await onStand(resp.roundId);
+		if ("serverSeed" in fin) settle(fin);  // settle ga bo vseeno še enkrat resetiral
+	  } finally {
+		setBusy(false);
+	  }
+	}
     } catch (e:any) {
       alert(e?.message || "place-bet failed");
     } finally {
@@ -217,12 +228,12 @@ export default function BlackjackProd({
     }
   }
 
-  /* primarni gumb: Bet / Bet Again (začne TAKOJ novo rundo) */
+  /* primarni gumb: Bet / Bet Again */
   async function primaryClick() {
-    if (betLocked) return;          // ⛔ nič med deljenjem ali aktivno rundo
+    if (betLocked) return;
     if (roundOver) {
       clean();
-      await place();                // takojšnji deal z istim betom
+      await place();
     } else {
       await place();
     }
@@ -232,37 +243,42 @@ export default function BlackjackProd({
   const actionDisabled = !roundId || roundOver || busy;
 
   async function hit() {
+    setCanInsurance(false);
     if (!roundId || roundOver) return;
     setBusy(true);
     try {
       const r = await onHit(roundId);
-      if ("serverSeed" in r) { // settled (npr. bust)
+
+      // 🔚 settle (npr. bust in ni več rok)
+      if ("serverSeed" in r) {
         if (r.playerCard != null) {
           setPlayerHands(h => {
             const cp = h.map(x=>x.slice());
             cp[active].push(r.playerCard!);
-            setHandValues(vals => {
-              const vv = vals.slice();
-              vv[active] = scoreHand(cp[active]);
-              return vv;
-            });
             return cp;
           });
         }
         settle(r);
         return;
       }
-      // navaden hit
-      setPlayerHands(h => {
-        const cp = h.map(x=>x.slice());
-        cp[active].push(r.card);
-        setHandValues(vals => {
-          const vv = vals.slice();
-          vv[active] = scoreHand(cp[active]);
-          return vv;
-        });
-        return cp;
-      });
+
+      // ➕ dodaj karto na trenutno roko
+      setPlayerHands(prev => {
+		  const cp = prev.map(x => x.slice());
+		  cp[active].push(r.card);
+		  setHandValues(vals => {
+			const vv = vals.slice();
+			vv[active] = scoreHand(cp[active]); // ✅ izračun iz sveže kopije
+			return vv;
+		  });
+		  return cp;
+		});
+
+      // ⬅️ če je bust, backend je že prestavil aktivni indeks → preklopi UI + osveži canDouble
+      if (r.bust) {
+        setActive(r.active);
+        setCanDouble((playerHands[r.active]?.length ?? 2) === 2);
+      }
     } catch (e:any) {
       alert(e?.message || "hit failed");
     } finally {
@@ -271,12 +287,15 @@ export default function BlackjackProd({
   }
 
   async function stand() {
+    setCanInsurance(false);
     if (!roundId || roundOver) return;
     setBusy(true);
     try {
       const r = await onStand(roundId);
       if ("serverSeed" in r) { settle(r); return; }
-      setActive(r.active); // naslednja split roka
+      setActive(r.active);
+      // 🔄 po preklopu osveži canDouble
+      setCanDouble((playerHands[r.active]?.length ?? 2) === 2);
     } catch (e:any) {
       alert(e?.message || "stand failed");
     } finally {
@@ -285,37 +304,31 @@ export default function BlackjackProd({
   }
 
   async function dbl() {
+    setCanInsurance(false);
     if (!roundId || roundOver) return;
     setBusy(true);
     try {
       const r = await onDouble(roundId);
       if ("serverSeed" in r) {
-        // backend je že zaključil – prikaži zadnjo karto, če jo pošlje
         if (r.playerCard != null) {
           setPlayerHands(h => {
             const cp = h.map(x=>x.slice());
             cp[active].push(r.playerCard!);
-            setHandValues(vals => {
-              const vv = vals.slice();
-              vv[active] = scoreHand(cp[active]);
-              return vv;
-            });
             return cp;
           });
         }
         settle(r);
         return;
       }
-      // standardno: dodaj karto in takojšnji stand → potential resolve
       setPlayerHands(h => {
         const cp = h.map(x=>x.slice());
         cp[active].push(r.card);
-        setHandValues(vals => {
-          const vv = vals.slice();
-          vv[active] = scoreHand(cp[active]);
-          return vv;
-        });
         return cp;
+      });
+      setHandValues(vals => {
+        const vv = vals.slice();
+        vv[active] = scoreHand([...playerHands[active], r.card]);
+        return vv;
       });
 
       const fin = await onStand(roundId);
@@ -328,6 +341,7 @@ export default function BlackjackProd({
   }
 
   async function split() {
+    setCanInsurance(false);
     if (!roundId || roundOver) return;
     setBusy(true);
     try {
@@ -344,15 +358,42 @@ export default function BlackjackProd({
       setBusy(false);
     }
   }
+  
+  async function takeInsurance(take:boolean) {
+  if (!roundId || roundOver || !onInsurance) return;
+  try {
+    const r = await onInsurance(roundId, take);
+    if (!r?.ok) throw new Error("insurance failed");
+    if (take && r.insuranceBet > 0) {
+      adjustBalance(selectedCurrency, -r.insuranceBet);
+    }
+  } catch (e:any) {
+    alert(e?.message || "insurance failed");
+  } finally {
+    setCanInsurance(false);
+  }
+}
 
   /* -------- Settle -------- */
-  function settle(fin:SettleResp) {
-    setDealer(fin.dealer); // ⬅️ to zamenja dealer[-1] z dejansko karto → flip animacija
-    setOutcomes(fin.outcomes.map(o=>o.result));
-    setHandValues(prev => playerHands.map(scoreHand));
-    setRoundOver(true);
-    if (fin.totalPayout > 0) adjustBalance(selectedCurrency, fin.totalPayout);
-  }
+  function settle(fin: SettleResp) {
+	  setDealer(fin.dealer);
+	  setOutcomes(fin.outcomes.map(o => o.result));
+	  setFinalValues(fin.outcomes.map(o => o.value));  // ⬅️
+	  setHandValues(playerHands.map(scoreHand));
+	  setRoundOver(true);
+	  setCanInsurance(false); 
+	  if (fin.totalPayout > 0) adjustBalance(selectedCurrency, fin.totalPayout);
+	}
+	
+	const badgeText = (i: number) => {
+	  const ov = outcomes[i];
+	  const live = handValues[i];
+	  const val = finalValues?.[i] ?? (live ? live.total : undefined);
+
+	  if (!ov) return live ? `${live.total}${live.soft ? " (soft)" : ""}` : "";
+	  if (ov === "blackjack") return "BLACKJACK 21";
+	  return `${ov.toUpperCase()} · ${val ?? ""}`;
+	};
 
   /* -------- UI helpers -------- */
   const pill = (t:string) => (
@@ -361,6 +402,20 @@ export default function BlackjackProd({
       {t}
     </div>
   );
+
+  // Dealer badge: pokaži vrednost vidnih kart (če je hole skrit → samo up-card)
+  const dealerPillText = (() => {
+    if (dealer.length === 0) return "Dealer";
+    if (dealer[1] >= 0) return String(scoreHand(dealer).total);
+    return String(scoreHand([dealer[0]]).total);
+  })();
+
+  // fan offseti (casino izgled)
+  const fanOffsets = (j: number): { ml: string; mt: string } => {
+    const stepEm = 1.0;
+    const overlapEm = -2.4;
+    return { ml: j === 0 ? "0em" : `${overlapEm}em`, mt: `${j * stepEm}em` };
+  };
 
   /* -------- Left panel -------- */
   const leftPanel =
@@ -377,7 +432,7 @@ export default function BlackjackProd({
             type="text"
             inputMode="decimal"
             value={betField}
-            disabled={betLocked}  // 🔒 zaklenjeno, ko runda teče
+            disabled={betLocked}
             onChange={(e)=> {
               let raw = e.target.value.replace(",", ".").replace(/[^0-9.]/g, "");
               const parts = raw.split(".");
@@ -399,18 +454,43 @@ export default function BlackjackProd({
               onClick={()=> setBet(b=>{ const v=Math.max(minBet, Number((b/2).toFixed(8))); setBetField(v.toFixed(8)); return v; })}
               className="px-2 py-2 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ backgroundColor:theme.panelSoft, borderColor:theme.border, borderWidth:1 }}
-              disabled={betLocked}   // 🔒
+              disabled={betLocked}
             >½</button>
             <button
               onClick={()=> setBet(b=>{ const v=Math.min(maxBet, Number((b*2).toFixed(8))); setBetField(v.toFixed(8)); return v; })}
               className="px-2 py-2 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ backgroundColor:theme.panelSoft, borderColor:theme.border, borderWidth:1 }}
-              disabled={betLocked}   // 🔒
+              disabled={betLocked}
             >2×</button>
           </div>
         </div>
         <p className="text-[11px] mt-1" style={{ color:theme.subtext }}>Min {minBet} · Max {maxBet}</p>
-
+		
+		{showInsurance && (
+		  <div className="mt-3 p-2 rounded-lg flex items-center justify-between"
+			   style={{ background:"#142431", border:`1px solid ${theme.border}` }}>
+			<div className="text-sm" style={{ color:theme.text }}>
+			  Insurance?
+			</div>
+			<div className="flex gap-2">
+			  <button
+				onClick={()=> takeInsurance(true)}
+				className="px-3 py-1.5 rounded-md text-sm font-semibold"
+				style={{ backgroundColor:theme.accent, color:theme.accentText }}
+			  >
+				Take
+			  </button>
+			  <button
+				onClick={()=> takeInsurance(false)}
+				className="px-3 py-1.5 rounded-md text-sm font-semibold"
+				style={{ background:"#223442", border:`1px solid ${theme.border}`, color:theme.text }}
+			  >
+				No Thanks
+			  </button>
+			</div>
+		  </div>
+		)}
+		
         <div className="mt-3 grid grid-cols-2 gap-2">
           <button disabled={actionDisabled} onClick={hit}
                   className="rounded-lg py-2 font-semibold disabled:opacity-50"
@@ -457,19 +537,22 @@ export default function BlackjackProd({
           <div className="rounded-xl px-4 md:px-8 py-6"
                style={{ backgroundColor:theme.panel, border:`1px solid ${theme.border}` }}>
             {/* Dealer */}
-            <div className="flex flex-col items-center mb-6">
-              <div className="mb-2">
-                {dealer.length>0 && dealer[1] >= 0 ? pill(`Dealer ${scoreHand(dealer).total}`) : pill("Dealer")}
-              </div>
-              <div className="flex gap-3">
-                {dealer.map((ci,i)=>
-                  <Card
-                    key={i}
-                    c={ci >= 0 ? ci : 0 /* front vseeno ne vidimo, ko je face-down */}
-                    revealed={ci >= 0}
-                    dealDelay={i * 0.08 + 0.04}
-                  />
-                )}
+            <div className="flex flex-col items-center mb-6 min-h-[200px]">
+              <div className="mb-2">{pill(dealerPillText)}</div>
+              <div className="flex items-start justify-center">
+                {dealer.map((ci,i)=> {
+                  const { ml, mt } = fanOffsets(i);
+                  return (
+                    <Card
+                      key={i}
+                      c={ci >= 0 ? ci : 0}
+                      revealed={ci >= 0}
+                      dealDelay={i * 0.08 + 0.04}
+                      ml={ml}
+                      mt={mt}
+                    />
+                  );
+                })}
               </div>
             </div>
 
@@ -479,39 +562,50 @@ export default function BlackjackProd({
             </div>
 
             {/* Player hands */}
-            <div className="flex flex-col items-center gap-6">
-              {playerHands.map((h, i)=>{
-                const ov = outcomes[i];
-                const border =
-                  ov === "blackjack" ? theme.win :
-                  ov === "win"       ? theme.win :
-                  ov === "lose"      ? theme.lose :
-                  ov === "push"      ? theme.push : theme.border;
-                const badge =
-                  ov === "blackjack" ? "BLACKJACK" :
-                  ov ? ov.toUpperCase() :
-                  handValues[i] ? `${handValues[i].total}${handValues[i].soft ? " (soft)" : ""}` : "";
-                const glow = roundId && !roundOver && i===active;
+			<div className="flex flex-col items-center gap-6 min-h-[200px] pt-[50px]">
+			  {playerHands.map((h, i) => {
+				const ov = outcomes[i];
+				const border =
+				  ov === "blackjack" ? theme.win :
+				  ov === "win"       ? theme.win :
+				  ov === "lose"      ? theme.lose :
+				  ov === "push"      ? theme.push : theme.border;
+				const glow = roundId && !roundOver && i === active;
 
-                return (
-                  <div key={i}
-                       className="relative rounded-2xl px-4 py-3"
-                       style={{
-                         border:`2px solid ${border}`,
-                         background: glow ? "rgba(32,64,80,.35)" : "rgba(20,36,49,.6)",
-                         boxShadow: glow ? "0 0 0 3px rgba(0,0,0,0)" : "none"
-                       }}>
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">{badge && pill(badge)}</div>
-                    <div className="flex items-center gap-3">
-                      {h.map((ci,j)=>
-                        <Card key={j} c={ci} revealed dealDelay={j * 0.08 + i * 0.04} />
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-              {!roundId && <div className="opacity-70 text-sm">Place a bet to start</div>}
-            </div>
+				return (
+				  <div
+					key={i}
+					className="relative rounded-2xl px-4 py-3"
+					style={{
+					  border: `2px solid ${border}`,
+					  background: glow ? "rgba(32,64,80,.35)" : "rgba(20,36,49,.6)",
+					  boxShadow: glow ? "0 0 0 3px rgba(0,231,1,.25)" : "none",
+					}}
+				  >
+					<div className="absolute -top-3 left-1/2 -translate-x-1/2">
+					  {badgeText(i) && pill(badgeText(i))}
+					</div>
+
+					<div className="flex items-start justify-center">
+					  {h.map((ci, j) => {
+						const { ml, mt } = fanOffsets(j);
+						return (
+						  <Card
+							key={j}
+							c={ci}
+							revealed
+							dealDelay={j * 0.08 + i * 0.04}
+							ml={ml}
+							mt={mt}
+						  />
+						);
+					  })}
+					</div>
+				  </div>
+				);
+			  })}
+			  {!roundId && <div className="opacity-70 text-sm">Place a bet to start</div>}
+			</div>
           </div>
         </div>
       </div>
