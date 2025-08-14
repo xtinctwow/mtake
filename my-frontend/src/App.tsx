@@ -1,6 +1,6 @@
 // src/App.tsx
 import React, { useState, useEffect } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useNavigate } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import Topbar from "./components/Topbar";
 import WalletPage from "./components/WalletPage";
@@ -20,6 +20,7 @@ import DiceProd from "./games/DiceProd.tsx";
 import { useCurrency } from "./context/CurrencyContext";
 import LimboPage from "./pages/LimboPage";
 import BlackjackPage from "./pages/BlackjackPage";
+import AuthErrorModal from "./components/AuthErrorModal";
 
 import {
   FaBars, FaGift, FaUsers, FaCrown, FaBook, FaShieldAlt, FaHeadset, FaGlobe,
@@ -140,7 +141,7 @@ function DiceProdRouteWrapper() {
 
 export default function App() {
   const [balance, setBalance] = useState(0.0);
-  const { email, token } = useAuth();
+  const { login, email, token } = useAuth();
   const [showWallet, setShowWallet] = useState(false);
   const isAuthenticated = !!token;
 
@@ -148,6 +149,11 @@ export default function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => window.innerWidth < 1200);
   const [isSidebarVisible, setIsSidebarVisible] = useState(() => window.innerWidth >= 800);
   const [userToggledSidebar, setUserToggledSidebar] = useState(false);
+  const [authErrorMsg, setAuthErrorMsg] = useState<string | null>(null);
+  
+  const api = import.meta.env.VITE_API_URL;
+  
+  const navigate = useNavigate();
 
   // Handle screen resize
   useEffect(() => {
@@ -183,7 +189,49 @@ export default function App() {
 	const sidebarWidth = !isSidebarVisible ? "w-0" : isSidebarCollapsed ? "w-20" : "w-64";
 	const contentPadding = !isSidebarVisible ? "pl-0" : isSidebarCollapsed ? "pl-20" : "pl-64";
 	const topbarLeft = !isSidebarVisible ? "left-0" : isSidebarCollapsed ? "left-20" : "left-64";
+	
+	useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token");
+    const email = params.get("email");
 
+    if (token && email && !isAuthenticated) {
+      login(token, email);
+      navigate("/", { replace: true }); // strip ?token
+    }
+  }, [isAuthenticated, login, navigate]);
+  
+	{/*LOGIN ERROR USE EFFECT*/}
+  
+	useEffect(() => {
+	  const params = new URLSearchParams(window.location.search);
+	  const err = params.get("auth_error");
+
+	  if (err) {
+		let msg = "An unknown error occurred.";
+
+		if (err === "line_no_email") {
+		  msg =
+			"LINE login needs an email address. Please grant email permission or use a different login method.";
+		} else if (err === "line_auth_failed") {
+		  msg = "LINE login failed. Please try again.";
+		} else if (err === "twitch_no_email") {
+		  msg =
+			"Twitch login needs an email address. Please verify your email on Twitch or use a different login method.";
+		} else if (err === "twitch_auth_failed") {
+		  msg = "Twitch login failed. Please try again.";
+		}
+
+		setAuthErrorMsg(msg);
+
+		// Strip only auth_error; preserve other params
+		params.delete("auth_error");
+		const next = `${window.location.pathname}${
+		  params.toString() ? "?" + params.toString() : ""
+		}`;
+		window.history.replaceState({}, "", next);
+	  }
+	}, []);
 
   return (
     <>
@@ -207,6 +255,14 @@ export default function App() {
           onWalletClick={() => setShowWallet(true)}
         />
       </div>
+	  
+	  {/* OAuthError Message*/}
+	  {authErrorMsg && (
+		  <AuthErrorModal
+			message={authErrorMsg}
+			onClose={() => setAuthErrorMsg(null)}
+		  />
+		)}
 
       {/* Main content min-h-screen */}
       <div className={`topbarbg text-white pt-16 transition-all duration-300 ${contentPadding}`}>
@@ -329,10 +385,10 @@ export default function App() {
 
 					<p className="pb-2 pt-0 [@media(min-width:988px)]:pt-7 [@media(min-width:1px)_and_(max-width:767px)]:pt-7">Sign up with:</p>
 					<div className="flex gap-1.5 flex-wrap [@media(min-width:1px)_and_(max-width:767px)]:justify-center">
-					  <FacebookButton onClick={() => console.log("FB clicked")} />
-					  <GoogleButton onClick={() => console.log("Google clicked")} />
-					  <LineButton onClick={() => console.log("Line clicked")} />
-					  <TwitchButton onClick={() => console.log("Twitch clicked")} />
+					  <FacebookButton onClick={() => { window.location.href = `${import.meta.env.VITE_API_URL}/api/auth/facebook`; }} />
+					  <GoogleButton onClick={() => window.location.href = "https://api.cyebe.com/api/auth/google"} />
+					  <LineButton onClick={() => { window.location.href = `${import.meta.env.VITE_API_URL}/api/auth/line`; }} />
+					  <TwitchButton onClick={() => { window.location.href = `${import.meta.env.VITE_API_URL}/api/auth/twitch`; }} />
 					</div>
 				  </div>
 
