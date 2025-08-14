@@ -168,6 +168,7 @@ export default function BlackjackProd({
   const [finalValues, setFinalValues] = useState<number[] | null>(null);
   const [canInsurance, setCanInsurance] = useState(false);
   const showInsurance = !!roundId && !roundOver && canInsurance;
+  const [handFromSplit, setHandFromSplit] = useState<boolean[]>([]);
 
   // ux locks
   const [rolling, setRolling] = useState(false);
@@ -199,7 +200,16 @@ export default function BlackjackProd({
     setRoundOver(false);
 	setFinalValues(null);
 	setCanInsurance(false);
+	setHandFromSplit([]);
   };
+  
+  const isNaturalBlackjackAt = (i: number) =>
+	  (playerHands[i]?.length === 2) &&
+	  scoreHand(playerHands[i]).total === 21 &&
+	  !handFromSplit[i]; //
+	  
+	const isTwoCard21 = (cards: number[]) =>
+	  cards.length === 2 && scoreHand(cards).total === 21;
 
   /* -------- PLACE (auto-resolve blackjack) -------- */
 	async function place() {
@@ -238,6 +248,7 @@ export default function BlackjackProd({
 
 		setRoundId(resp.roundId);
 		setPlayerHands([resp.player]);
+		setHandFromSplit([false]);
 		setHandValues([scoreHand(resp.player)]);
 		setDealer([resp.dealerUp, -1]);
 		setCanSplit(resp.canSplit);
@@ -253,9 +264,13 @@ export default function BlackjackProd({
 		  setCanInsurance(false);
 		  setBusy(true);
 		  try {
+			const fin = await onStand(resp.roundId);   // <- define it!
 			if ("serverSeed" in fin) {
-			  settle(fin);   // settle will set seeds.serverSeed + persist
+			  settle(fin); // settle will set seeds.serverSeed + persist
 			}
+		  } catch (e:any) {
+			console.error(e);
+			alert(e?.message || "auto-settle failed");
 		  } finally {
 			setBusy(false);
 		  }
@@ -395,6 +410,7 @@ export default function BlackjackProd({
       setCanSplit(false);
       setCanDouble(r.canDouble);
       setOutcomes(new Array(r.hands.length).fill(null));
+	  setHandFromSplit([true, true]);
     } catch (e:any) {
       alert(e?.message || "split failed");
     } finally {
@@ -441,11 +457,22 @@ function settle(fin: SettleResp) {
 	const badgeText = (i: number) => {
 	  const ov = outcomes[i];
 	  const live = handValues[i];
-	  const val = finalValues?.[i] ?? (live ? live.total : undefined);
+	  const valNow = live?.total;
 
-	  if (!ov) return live ? `${live.total}${live.soft ? " (soft)" : ""}` : "";
-	  if (ov === "blackjack") return "BLACKJACK 21";
-	  return `${ov.toUpperCase()} · ${val ?? ""}`;
+	  // While hand is still live (no outcome yet)
+	  if (!ov) {
+		if (isNaturalBlackjackAt(i)) return "BLACKJACK";
+		if (live) {
+		  const softLabel = valNow! < 21 && live.soft ? " (SOFT)" : "";
+		  return `${valNow}${softLabel}`;
+		}
+		return "";
+	  }
+
+	  // After settle
+	  if (ov === "blackjack") return "BLACKJACK";
+	  const finalVal = finalValues?.[i] ?? valNow;
+	  return `${ov.toUpperCase()} · ${finalVal ?? ""}`;
 	};
 
   /* -------- UI helpers -------- */
@@ -457,11 +484,17 @@ function settle(fin: SettleResp) {
   );
 
   // Dealer badge: pokaži vrednost vidnih kart (če je hole skrit → samo up-card)
-  const dealerPillText = (() => {
-    if (dealer.length === 0) return "Dealer";
-    if (dealer[1] >= 0) return String(scoreHand(dealer).total);
-    return String(scoreHand([dealer[0]]).total);
-  })();
+	const dealerPillText = (() => {
+	  if (dealer.length === 0) return "Dealer";
+
+	  const holeRevealed = dealer[1] >= 0;     // -1 means still hidden in your UI
+	  if (holeRevealed && isTwoCard21(dealer)) {
+		return "BLACKJACK";                     // or "BLACKJACK 21" for consistency
+	  }
+
+	  const shownCards = holeRevealed ? dealer : [dealer[0]];
+	  return String(scoreHand(shownCards).total);
+	})();
 
   // fan offseti (casino izgled)
   const fanOffsets = (j: number): { ml: string; mt: string } => {
