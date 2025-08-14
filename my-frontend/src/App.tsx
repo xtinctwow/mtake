@@ -21,6 +21,7 @@ import { useCurrency } from "./context/CurrencyContext";
 import LimboPage from "./pages/LimboPage";
 import BlackjackPage from "./pages/BlackjackPage";
 import AuthErrorModal from "./components/AuthErrorModal";
+import BaccaratPage from "./pages/BaccaratPage";
 
 import {
   FaBars, FaGift, FaUsers, FaCrown, FaBook, FaShieldAlt, FaHeadset, FaGlobe,
@@ -526,7 +527,7 @@ export default function App() {
                     <GameCard title="Mines" players={3849} img="/mines_originals.jpg" url="/casino/games/mines" />
                     <GameCard title="Limbo" players={3849} img="/limbo_originals.jpg" url="/casino/games/limbo" />
                     <GameCard title="Blackjack" players={632} img="/bj_originals.jpg" url="/casino/games/blackjack" />
-                    <GameCard title="Roulette" players={632} />
+                    <GameCard title="Baccarat" players={632} img="/bacca_originals.jpg" url="/casino/games/baccarat" />
                   </div>
                 </section>
 
@@ -537,7 +538,7 @@ export default function App() {
                     <GameCard title="Mines" players={3849} img="/mines_originals.jpg" url="/casino/games/mines" />
                     <GameCard title="Limbo" players={3849} img="/limbo_originals.jpg" url="/casino/games/limbo" />
                     <GameCard title="Blackjack" players={632} img="/bj_originals.jpg" url="/casino/games/blackjack" />
-                    <GameCard title="Zombie School" players={3456} />
+                    <GameCard title="Baccarat" players={3456} img="/bacca_originals.jpg" url="/casino/games/baccarat" />
                   </div>
                 </section>
               </main>
@@ -550,6 +551,7 @@ export default function App() {
 		  <Route path="casino/games/dice" element={<DiceProdRouteWrapper />} />
 		  <Route path="casino/games/limbo" element={<LimboPage />} />
 		  <Route path="casino/games/blackjack" element={<BlackjackPage />} />
+		  <Route path="casino/games/baccarat" element={<BaccaratPage />} />
 		  <Route path="/terms" element={<Terms />} />
 		  <Route path="/privacy" element={<Privacy />} />
 		  <Route path="/anti-money-laundering" element={<AML />} />

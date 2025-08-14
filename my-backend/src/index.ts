@@ -12,6 +12,7 @@ import diceRoutes from "./routes/dice";
 import minesRoutes from "./routes/mines";
 import limboRoutes from "./routes/limbo";
 import blackjackRoutes from "./routes/blackjack";
+import baccaratRoutes from "./routes/baccarat";
 import { authenticateToken } from "./middleware/auth";
 import { startPriceUpdater } from "./cron/updatePrices";
 
@@ -60,6 +61,7 @@ app.use("/api/dice", authenticateToken, diceRoutes);
 app.use("/api/mines", authenticateToken, minesRoutes);   
 app.use("/api/limbo", authenticateToken, limboRoutes);   
 app.use("/api/blackjack", authenticateToken, blackjackRoutes); 
+app.use("/api/baccarat", authenticateToken, baccaratRoutes); 
 
 // Cron job
 startPriceUpdater();
