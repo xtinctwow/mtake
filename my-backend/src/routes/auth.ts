@@ -375,7 +375,7 @@ passport.use(
             : null;
 
         if (!email) {
-          return done(new Error("No email found on Facebook profile"));
+          return done(new Error("FACEBOOK_NO_EMAIL"));
         }
 
         let user = await prisma.user.findUnique({ where: { email } });
@@ -409,18 +409,32 @@ router.get(
 );
 
 // Facebook callback
-router.get(
-  "/facebook/callback",
-  passport.authenticate("facebook", {
-    failureRedirect: `${FRONTEND_BASE_URL}/login?error=facebook_auth_failed`,
-    session: false,
-  }),
-  (req, res) => {
-    const user = req.user as { id: number; email: string };
-    const token = signJwt({ id: user.id });
-    const emailParam = encodeURIComponent(user.email);
-    res.redirect(`${FRONTEND_BASE_URL}/login?token=${token}&email=${emailParam}`);
-  }
-);
+router.get("/facebook/callback", (req, res, next) => {
+  passport.authenticate(
+    "facebook",
+    { session: false },
+    (err: any, user: { id: number; email: string } | false) => {
+      if (err || !user) {
+        // Normalize common failure reasons into friendly codes
+        const msg = (err?.message || "").toLowerCase();
+
+        // App not live / disabled
+        if (msg.includes("app not active")) {
+          return res.redirect(`${FRONTEND_BASE_URL}/?auth_error=facebook_app_inactive`);
+        }
+        // User didn't share email (or profile has none)
+        if (err && err.message === "FACEBOOK_NO_EMAIL") {
+          return res.redirect(`${FRONTEND_BASE_URL}/?auth_error=facebook_no_email`);
+        }
+        // Generic failure
+        return res.redirect(`${FRONTEND_BASE_URL}/?auth_error=facebook_auth_failed`);
+      }
+
+      const token = signJwt({ id: user.id });
+      const emailParam = encodeURIComponent(user.email);
+      return res.redirect(`${FRONTEND_BASE_URL}/login?token=${token}&email=${emailParam}`);
+    }
+  )(req, res, next);
+});
 
 export default router;

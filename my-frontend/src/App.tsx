@@ -85,6 +85,54 @@ function MinesPage() {
   );
 }
 
+function Terms() {
+  const [terms, setTerms] = useState('');
+
+  useEffect(() => {
+    fetch('/terms.txt')
+      .then(res => res.text())
+      .then(setTerms);
+  }, []);
+
+  return (
+    <div className="max-w-[1200px] mx-auto" style={{ whiteSpace: 'pre-wrap' }}>
+      {terms}
+    </div>
+  );
+}
+
+function Privacy() {
+  const [privacy, setPrivacy] = useState('');
+
+  useEffect(() => {
+    fetch('/privacy.txt')
+      .then(res => res.text())
+      .then(setPrivacy);
+  }, []);
+
+  return (
+    <div className="max-w-[1200px] mx-auto" style={{ whiteSpace: 'pre-wrap' }}>
+      {privacy}
+    </div>
+  );
+}
+
+function AML() {
+  const [aml, setAml] = useState('');
+
+  useEffect(() => {
+    fetch('/aml.txt')
+      .then(res => res.text())
+      .then(setAml);
+  }, []);
+
+  return (
+    <div className="max-w-[1200px] mx-auto" style={{ whiteSpace: 'pre-wrap' }}>
+      {aml}
+    </div>
+  );
+}
+
 function DiceProdRouteWrapper() {
   const api = import.meta.env.VITE_API_URL;
   const { token } = useAuth();
@@ -210,25 +258,32 @@ export default function App() {
 	  if (err) {
 		let msg = "An unknown error occurred.";
 
+		// LINE
 		if (err === "line_no_email") {
-		  msg =
-			"LINE login needs an email address. Please grant email permission or use a different login method.";
+		  msg = "LINE login needs an email address. Please grant email permission or use a different login method.";
 		} else if (err === "line_auth_failed") {
 		  msg = "LINE login failed. Please try again.";
+
+		// Twitch
 		} else if (err === "twitch_no_email") {
-		  msg =
-			"Twitch login needs an email address. Please verify your email on Twitch or use a different login method.";
+		  msg = "Twitch login needs an email address. Please verify your email on Twitch or use a different login method.";
 		} else if (err === "twitch_auth_failed") {
 		  msg = "Twitch login failed. Please try again.";
+
+		// Facebook
+		} else if (err === "facebook_app_inactive") {
+		  msg = "Facebook login is temporarily unavailable because the app isn’t active. Please try again later or use another login method.";
+		} else if (err === "facebook_no_email") {
+		  msg = "Facebook didn’t provide an email. Please allow email access on Facebook or use a different login method.";
+		} else if (err === "facebook_auth_failed") {
+		  msg = "Facebook login failed. Please try again.";
 		}
 
 		setAuthErrorMsg(msg);
 
-		// Strip only auth_error; preserve other params
+		// Strip only the auth_error, keep other params
 		params.delete("auth_error");
-		const next = `${window.location.pathname}${
-		  params.toString() ? "?" + params.toString() : ""
-		}`;
+		const next = `${window.location.pathname}${params.toString() ? "?" + params.toString() : ""}`;
 		window.history.replaceState({}, "", next);
 	  }
 	}, []);
@@ -495,6 +550,10 @@ export default function App() {
 		  <Route path="casino/games/dice" element={<DiceProdRouteWrapper />} />
 		  <Route path="casino/games/limbo" element={<LimboPage />} />
 		  <Route path="casino/games/blackjack" element={<BlackjackPage />} />
+		  <Route path="/terms" element={<Terms />} />
+		  <Route path="/privacy" element={<Privacy />} />
+		  <Route path="/anti-money-laundering" element={<AML />} />
+		  <Route path="/data-deletion" element={<Privacy />} />
         </Routes>
       </div>
 	  
@@ -556,9 +615,9 @@ export default function App() {
                 <ul className="space-y-1">
                   <li>VIP Club</li>
                   <li>Affiliate</li>
-                  <li>Privacy Policy</li>
-                  <li>AML Policy</li>
-                  <li>Terms of Service</li>
+                  <li><Link to="/privacy">Privacy Policy</Link></li>
+                  <li><Link to="/anti-money-laundering">AML Policy</Link></li>
+                  <li><Link to="/terms">Terms of Service</Link></li>
                 </ul>
               </div>
 
