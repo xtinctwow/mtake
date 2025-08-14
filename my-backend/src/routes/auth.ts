@@ -360,32 +360,53 @@ passport.use(
       callbackURL: `${API_BASE_URL}/api/auth/facebook/callback`,
       profileFields: [
         "id",
-        "emails",
+        "email",           // keep this
         "name",
         "displayName",
         "picture.type(large)",
       ],
       enableProof: true,
     },
-    async (_accessToken, _refreshToken, profile, done) => {
+    // NOTE: use accessToken (not prefixed with _), we need it for Graph fallback
+    async (accessToken, _refreshToken, profile, done) => {
       try {
-        const email =
-          profile.emails?.[0]?.value
-            ? normalizeEmail(profile.emails[0].value)
-            : null;
+        // 1) Try emails from profile
+        let emailRaw: string =
+          profile.emails?.[0]?.value ||
+          // @ts-ignore – raw data sometimes places email here
+          (profile as any)?._json?.email ||
+          "";
+
+        // 2) If missing, fetch via Graph API as a fallback
+        if (!emailRaw) {
+          try {
+            const url = `https://graph.facebook.com/v19.0/me?fields=id,email&access_token=${encodeURIComponent(
+              accessToken
+            )}`;
+            const resp = await fetch(url);
+            if (resp.ok) {
+              const data = (await resp.json()) as { email?: string };
+              if (data?.email) emailRaw = data.email;
+            } else {
+              // Optional: log response text for debugging
+              const txt = await resp.text();
+              console.warn("FB Graph email fetch failed:", resp.status, txt);
+            }
+          } catch (e) {
+            console.warn("FB Graph email fetch error:", e);
+          }
+        }
+
+        const email = emailRaw ? normalizeEmail(emailRaw) : null;
 
         if (!email) {
           return done(new Error("FACEBOOK_NO_EMAIL"));
         }
 
         let user = await prisma.user.findUnique({ where: { email } });
-
         if (!user) {
           user = await prisma.user.create({
-            data: {
-              email,
-              password: "", // or null if schema allows
-            },
+            data: { email, password: "" },
           });
           await ensureWallet(user.id);
         }
@@ -399,34 +420,33 @@ passport.use(
   )
 );
 
-// Start Facebook flow
+// Start Facebook flow — make FB re-prompt for declined permissions
 router.get(
   "/facebook",
-  passport.authenticate("facebook", {
-    scope: ["email"],
-    session: false,
-  })
+  passport.authenticate(
+    "facebook",
+    {
+      scope: ["email"],       // you can add 'public_profile' but it's default
+      authType: "rerequest",  // re-ask if the user declined email before
+      session: false,
+    } as any // TS: authType isn't in AuthenticateOptions
+  )
 );
 
-// Facebook callback
+// Facebook callback (you already have this custom handler)
 router.get("/facebook/callback", (req, res, next) => {
   passport.authenticate(
     "facebook",
     { session: false },
     (err: any, user: { id: number; email: string } | false) => {
       if (err || !user) {
-        // Normalize common failure reasons into friendly codes
         const msg = (err?.message || "").toLowerCase();
-
-        // App not live / disabled
         if (msg.includes("app not active")) {
           return res.redirect(`${FRONTEND_BASE_URL}/?auth_error=facebook_app_inactive`);
         }
-        // User didn't share email (or profile has none)
         if (err && err.message === "FACEBOOK_NO_EMAIL") {
           return res.redirect(`${FRONTEND_BASE_URL}/?auth_error=facebook_no_email`);
         }
-        // Generic failure
         return res.redirect(`${FRONTEND_BASE_URL}/?auth_error=facebook_auth_failed`);
       }
 
