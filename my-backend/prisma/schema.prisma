@@ -21,6 +21,7 @@ model User {
   MinesRound     MinesRound[]
   LimboRound     LimboRound[]
   BlackjackRound BlackjackRound[]
+  BaccaratRound  BaccaratRound[]
 }
 
 model Transaction {
@@ -142,5 +143,33 @@ model BlackjackRound {
   updatedAt DateTime @updatedAt
 
   @@unique([userId, clientSeed, nonce])
+  @@index([userId, clientSeed, createdAt])
+}
+
+model BaccaratRound {
+  id     String @id @default(cuid())
+  userId Int?
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  currency String // "BTC" | "SOL"
+
+  // provably-fair commit/reveal
+  clientSeed     String
+  nonce          Int
+  serverSeed     String
+  serverSeedHash String
+
+  // vplačila (samo glavne stave)
+  totalBet  Float @default(0)
+  betPlayer Float @default(0)
+  betBanker Float @default(0)
+  betTie    Float @default(0)
+
+  // poljubno stanje (če ga želiš hraniti)
+  state Json
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, clientSeed, nonce]) // nonce per (userId, clientSeed)
   @@index([userId, clientSeed, createdAt])
 }
