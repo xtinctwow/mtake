@@ -149,8 +149,7 @@ router.get("/twitch/callback", (req, res, next) => {
 });
 
 /** ----------------------------------------------------------------
- *  LINE Login (stateless)
- *  NOTE: Casting to `any` to bypass inaccurate type overloads in `passport-line`
+ *  LINE Login (stateless) — supports no-email by deferring to modal
  *  -------------------------------------------------------------- */
 passport.use(
   new (LineStrategy as any)(
@@ -158,35 +157,67 @@ passport.use(
       channelID: LINE_CHANNEL_ID!,
       channelSecret: LINE_CHANNEL_SECRET!,
       callbackURL: `${API_BASE_URL}/api/auth/line/callback`,
-      scope: "profile openid email",   // must be a single string
-      passReqToCallback: true,         // verify will receive (req, ...)
+      scope: "profile openid email",   // keep as a single space-delimited string
+      passReqToCallback: true,
     } as any,
     async (
-      req: Request,
+      _req: Request,
       _accessToken: string,
       _refreshToken: string,
-      params: any,                     // contains id_token
+      params: any,   // contains OIDC id_token
       profile: any,
       done: (err: any, user?: any) => void
     ) => {
       try {
+        // try get email from profile and/or OIDC id_token
         const profileEmail: string | undefined =
           profile?.emails?.[0]?.value || profile?._json?.email;
-
         const idTokenEmail = emailFromIdToken(params?.id_token);
-        const email =
-          (profileEmail || idTokenEmail || "").trim().toLowerCase() || null;
+        const email = (profileEmail || idTokenEmail || "").trim().toLowerCase() || null;
+
+        const lineId = profile?.id;
 
         if (!email) {
-          return done(new Error("LINE_NO_EMAIL"));
+          // 1) Returning user? log in via linked providerId
+          if (lineId) {
+            const link = await prisma.oAuthAccount.findUnique({
+              where: { providerId: `line:${lineId}` },
+              include: { user: true },
+            });
+            if (link?.user) {
+              return done(null, link.user);
+            }
+          }
+          // 2) New user + no email → tell callback to start pending-email flow
+          return done(
+            null,
+            {
+              __pendingNoEmail: true,
+              provider: "line",
+              providerId: lineId,
+              displayName: profile?.displayName,
+              avatar: profile?.photos?.[0]?.value,
+            } as any
+          );
         }
 
+        // With email → upsert user and link LINE provider
         let user = await prisma.user.findUnique({ where: { email } });
         if (!user) {
-          user = await prisma.user.create({
-            data: { email, password: "" }, // or null if your schema allows
-          });
+          user = await prisma.user.create({ data: { email, password: "" } });
           await ensureWallet(user.id);
+        }
+
+        if (lineId) {
+          await prisma.oAuthAccount.upsert({
+            where: { providerId: `line:${lineId}` },
+            update: { userId: user.id },
+            create: {
+              provider: "line",
+              providerId: `line:${lineId}`,
+              userId: user.id,
+            },
+          });
         }
 
         return done(null, user);
@@ -203,7 +234,7 @@ router.get(
   "/line",
   passport.authenticate("line", {
     session: false,
-    scope: "profile openid email", // keep as string if you set it here
+    scope: "profile openid email",
   })
 );
 
@@ -212,21 +243,34 @@ router.get("/line/callback", (req, res, next) => {
   passport.authenticate(
     "line",
     { session: false },
-    (err: any, user: { id: number; email: string } | false) => {
-      if (err || !user) {
-        // Specific warning when the user didn’t grant/provide an email
-        if (err && (err.message === "LINE_NO_EMAIL")) {
-          return res.redirect(`${FRONTEND_BASE_URL}/?auth_error=line_no_email`);
-        }
-        // Generic LINE failure warning
+    (err: any, userOrInfo: any) => {
+      if (err) {
         return res.redirect(`${FRONTEND_BASE_URL}/?auth_error=line_auth_failed`);
       }
 
-      // Success → issue JWT and send to your normal login handoff route
+      // pending-email flow
+      if (userOrInfo?.__pendingNoEmail) {
+        const pendingToken = jwt.sign(
+          {
+            kind: "oauth_pending",
+            provider: "line",
+            providerId: userOrInfo.providerId,
+          },
+          JWT_SECRET!,
+          { expiresIn: "10m" }
+        );
+        const redirect = `${FRONTEND_BASE_URL}/login?oauth_pending=line&pending_token=${encodeURIComponent(
+          pendingToken
+        )}`;
+        return res.redirect(redirect);
+      }
+
+      // normal success
+      const user = userOrInfo as { id: number; email: string };
       const token = signJwt({ id: user.id });
       const emailParam = encodeURIComponent(user.email);
       return res.redirect(
-	  `${FRONTEND_BASE_URL}/login?token=${token}&email=${emailParam}`
+        `${FRONTEND_BASE_URL}/login?token=${token}&email=${emailParam}`
       );
     }
   )(req, res, next);

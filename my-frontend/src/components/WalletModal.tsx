@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import { usePrices } from "../context/PricesContext";
 
 export default function WalletModal({ onClose }: { onClose: () => void }) {
   const { token } = useAuth();
+  const { BTC: btcPrice, SOL: solPrice } = usePrices();
   const [balance, setBalance] = useState(0);
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("btc");
@@ -14,55 +16,37 @@ export default function WalletModal({ onClose }: { onClose: () => void }) {
   const [btcAddress, setBtcAddress] = useState("");
   const [copied, setCopied] = useState(false);
   const [solAddress, setSolAddress] = useState("");
-  
+
   const [btcBalance, setBtcBalance] = useState(0);
   const [solBalance, setSolBalance] = useState(0);
-  
+
   const api = import.meta.env.VITE_API_URL;
-  
-  const [btcPrice, setBtcPrice] = useState(68000);
-  const [solPrice, setSolPrice] = useState(150);
-  
+
   const totalValue = btcBalance * btcPrice + solBalance * solPrice;
 
   useEffect(() => {
-  const fetchWallet = async () => {
-    // BTC
-    const btcRes = await fetch(`${api}/api/wallet/btc`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (btcRes.ok) {
-      const data = await btcRes.json();
-      setBtcBalance(data.balance);
-      if (data.address) setBtcAddress(data.address);
-    }
+    const fetchWallet = async () => {
+      const btcRes = await fetch(`${api}/api/wallet/btc`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (btcRes.ok) {
+        const data = await btcRes.json();
+        setBtcBalance(data.balance);
+        if (data.address) setBtcAddress(data.address);
+      }
 
-    // SOL
-    const solRes = await fetch(`${api}/api/wallet/sol`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (solRes.ok) {
-      const data = await solRes.json();
-      setSolBalance(data.balance);
-      if (data.address) setSolAddress(data.address);
-    }
-  };
+      const solRes = await fetch(`${api}/api/wallet/sol`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (solRes.ok) {
+        const data = await solRes.json();
+        setSolBalance(data.balance);
+        if (data.address) setSolAddress(data.address);
+      }
+    };
 
-  if (token) fetchWallet();
-}, [token]);
-
-useEffect(() => {
-  const fetchPrices = async () => {
-    const res = await fetch(`${api}/api/wallet/prices`);
-    if (res.ok) {
-      const data = await res.json();
-      if (data.BTC) setBtcPrice(data.BTC);
-      if (data.SOL) setSolPrice(data.SOL);
-    }
-  };
-
-  fetchPrices();
-}, []);
+    if (token) fetchWallet();
+  }, [token, api]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
