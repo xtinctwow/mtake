@@ -9,6 +9,8 @@ import {
 } from "react-icons/fa";
 import logo from "../assets/cyebe-logo-web.png";
 
+import { usePrices } from "../context/PricesContext";
+
 export default function Topbar({
   balance,           // (ne uporabljaš več, lahko pustiš ali odstraniš iz propsov)
   onWalletClick,
@@ -28,6 +30,8 @@ export default function Topbar({
     solBalance,
     setBalances,       // <- API rezultate porinemo v context
   } = useCurrency();
+  
+  const { BTC: btcPrice, SOL: solPrice } = usePrices();
 
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -43,8 +47,8 @@ export default function Topbar({
   const api = import.meta.env.VITE_API_URL;
 
   // Cene lahko ostanejo lokalno v Topbar
-  const [btcPrice, setBtcPrice] = useState(68000);
-  const [solPrice, setSolPrice] = useState(150);
+  //const [btcPrice, setBtcPrice] = useState(68000);
+  //const [solPrice, setSolPrice] = useState(150);
   const [showBalanceDropdown, setShowBalanceDropdown] = useState(false);
 
   // 🔁 Fetch iz API-ja -> zapišemo v CurrencyContext (ne v lokalni state)
@@ -74,11 +78,7 @@ export default function Topbar({
         // -> tu posodobimo context; Topbar (in ostali) se takoj rerenderajo
         setBalances({ BTC: btc, SOL: sol });
 
-        if (pricesRes.ok) {
-          const data = await pricesRes.json();
-          if (data.BTC) setBtcPrice(data.BTC);
-          if (data.SOL) setSolPrice(data.SOL);
-        }
+        
 
         if (btc <= 0 && sol <= 0) {
           setSelectedCurrency("BTC");

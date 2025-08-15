@@ -24,6 +24,7 @@ import AuthErrorModal from "./components/AuthErrorModal";
 import BaccaratPage from "./pages/BaccaratPage";
 import OAuthEmailModal from "./components/OAuthEmailModal";
 import UsernameModal from "./components/UsernameModal";
+import { useMe } from "./context/MeContext";
 
 import {
   FaBars, FaGift, FaUsers, FaCrown, FaBook, FaShieldAlt, FaHeadset, FaGlobe,
@@ -334,46 +335,24 @@ export default function App() {
 	}, []);
 	
 	function UsernameGate() {
-  const { token } = useAuth();
-  const [need, setNeed] = useState(false);
-  const loc = useLocation();
-  const api = import.meta.env.VITE_API_URL;
+	  const { token } = useAuth();
+	  const me = useMe();
+	  const [need, setNeed] = useState(false);
 
-  // Ob vsakem mountu, menjavi route ali osvežitvi – preveri profil
-  useEffect(() => {
-    const check = async () => {
-      if (!token) {
-        setNeed(false);
-        return;
-      }
-      try {
-        const res = await fetch(`${api}/api/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-          credentials: "include",
-        });
-        if (!res.ok) {
-          setNeed(false);
-          return;
-        }
-        const me = await res.json(); // { email, username }
-        setNeed(!me?.username);      // če ni username → zahtevaj modal
-      } catch {
-        setNeed(false);
-      }
-    };
-    check();
-  }, [token, loc.pathname]); // ponovno preveri na vsaki navigaciji
+	  useEffect(() => {
+		setNeed(!!token && !me?.username);
+	  }, [token, me?.username]);
 
-  if (!token || !need) return null;
+	  if (!need) return null;
 
-  return (
-    <UsernameModal
-      onSuccess={() => {
-        setNeed(false);
-      }}
-    />
-  );
-}
+	  return (
+		<UsernameModal
+		  onSuccess={() => {
+			setNeed(false);
+		  }}
+		/>
+	  );
+	}
 
   return (
     <>
