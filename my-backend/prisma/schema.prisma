@@ -1,3 +1,5 @@
+// schema.prisma
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,17 +13,19 @@ model User {
   id             Int              @id @default(autoincrement())
   email          String           @unique
   password       String
+  username       String?          @unique
   balance        Float            @default(0)
   btcWallet      BtcWallet?
   solWallet      SolWallet?
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @default(now()) @updatedAt
   transactions   Transaction[]
-  diceRounds     DiceRound[] // ✅ opposite side of relation
+  diceRounds     DiceRound[]
   MinesRound     MinesRound[]
   LimboRound     LimboRound[]
   BlackjackRound BlackjackRound[]
   BaccaratRound  BaccaratRound[]
+  OAuthAccount   OAuthAccount[]
 }
 
 model Transaction {
@@ -70,7 +74,7 @@ model DiceRound {
   nonce          Int
   serverSeed     String
   serverSeedHash String
-  currency       String // "BTC" | "SOL"
+  currency       String
   createdAt      DateTime @default(now())
 
   @@unique([userId, clientSeed, nonce])
@@ -83,20 +87,17 @@ model MinesRound {
   user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   bet            Float
-  currency       String // "BTC" | "SOL"
+  currency       String
   mines          Int
   clientSeed     String
   nonce          Int
   serverSeed     String
   serverSeedHash String
-
-  // state
-  status       String @default("live") // "live" | "bust" | "cashed"
-  safeRevealed Int    @default(0)
-  revealed     Int[]  @default([]) // indeksi že kliknjenih polj (0..24)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  status         String   @default("live")
+  safeRevealed   Int      @default(0)
+  revealed       Int[]    @default([])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   @@unique([userId, clientSeed, nonce])
   @@index([userId, clientSeed, createdAt])
@@ -108,13 +109,13 @@ model LimboRound {
   user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   bet            Float
-  target         Float // ciljni multiplikator
-  resultMult     Float? // dejanski “rolled” multiplier (po resolve)
+  target         Float
+  resultMult     Float?
   clientSeed     String
   nonce          Int
   serverSeed     String
   serverSeedHash String
-  currency       String // "BTC" | "SOL"
+  currency       String
   createdAt      DateTime @default(now())
 
   @@unique([userId, clientSeed, nonce])
@@ -126,21 +127,15 @@ model BlackjackRound {
   userId Int?
   user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  bet      Float // stake za osnovno roko
-  currency String // "BTC" | "SOL"
-
-  // provably fair
+  bet            Float
+  currency       String
   clientSeed     String
   nonce          Int
   serverSeed     String
   serverSeedHash String
-
-  // rešitev: v JSON shranimo stanje runde
-  // deck = vnaprej deterministično premešan shoe (6 deckov = 312 kart)
-  // drawPtr = kazalec naslednje karte
-  state     Json // { deck:number[], drawPtr:number, hands: Hand[], dealer:number[], active:number, status:"playing"|"settled" }
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  state          Json
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   @@unique([userId, clientSeed, nonce])
   @@index([userId, clientSeed, createdAt])
@@ -151,25 +146,29 @@ model BaccaratRound {
   userId Int?
   user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  currency String // "BTC" | "SOL"
-
-  // provably-fair commit/reveal
+  currency       String
   clientSeed     String
   nonce          Int
   serverSeed     String
   serverSeedHash String
 
-  // vplačila (samo glavne stave)
   totalBet  Float @default(0)
   betPlayer Float @default(0)
   betBanker Float @default(0)
   betTie    Float @default(0)
 
-  // poljubno stanje (če ga želiš hraniti)
-  state Json
-
+  state     Json
   createdAt DateTime @default(now())
 
-  @@unique([userId, clientSeed, nonce]) // nonce per (userId, clientSeed)
+  @@unique([userId, clientSeed, nonce])
   @@index([userId, clientSeed, createdAt])
+}
+
+model OAuthAccount {
+  id         Int      @id @default(autoincrement())
+  provider   String
+  providerId String   @unique
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id])
+  createdAt  DateTime @default(now())
 }

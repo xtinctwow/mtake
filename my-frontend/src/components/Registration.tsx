@@ -8,8 +8,8 @@ export default function Registration() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const { login } = useAuth(); // ✅ get login method from context
-  const navigate = useNavigate(); // ✅ for redirecting
+  const { login } = useAuth();
+  const navigate = useNavigate();
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
@@ -26,11 +26,16 @@ export default function Registration() {
       const data = await res.json();
 
       if (res.ok) {
-        login(data.token, data.email);
-        navigate("/");
-      } else {
-        setMessage(data.message || "Registration failed");
-      }
+	  login(data.token, data.email, data.username ?? null);
+	  
+	  if (data.username) {
+		localStorage.setItem("username", data.username);
+	  }
+	  
+	  navigate("/");
+	} else {
+	  setMessage(data.message || "Registration failed");
+	}
     } catch {
       setMessage("Error connecting to server");
     }

@@ -1,6 +1,6 @@
 // src/App.tsx
 import React, { useState, useEffect } from "react";
-import { Routes, Route, useNavigate } from "react-router-dom";
+import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import Topbar from "./components/Topbar";
 import WalletPage from "./components/WalletPage";
@@ -22,6 +22,8 @@ import LimboPage from "./pages/LimboPage";
 import BlackjackPage from "./pages/BlackjackPage";
 import AuthErrorModal from "./components/AuthErrorModal";
 import BaccaratPage from "./pages/BaccaratPage";
+import OAuthEmailModal from "./components/OAuthEmailModal";
+import UsernameModal from "./components/UsernameModal";
 
 import {
   FaBars, FaGift, FaUsers, FaCrown, FaBook, FaShieldAlt, FaHeadset, FaGlobe,
@@ -190,7 +192,7 @@ function DiceProdRouteWrapper() {
 
 export default function App() {
   const [balance, setBalance] = useState(0.0);
-  const { login, email, token } = useAuth();
+  const { login, email, token, username } = useAuth();
   const [showWallet, setShowWallet] = useState(false);
   const isAuthenticated = !!token;
 
@@ -243,9 +245,11 @@ export default function App() {
     const params = new URLSearchParams(window.location.search);
     const token = params.get("token");
     const email = params.get("email");
+	const username = params.get("username");
 
     if (token && email && !isAuthenticated) {
       login(token, email);
+	  if (username) localStorage.setItem("username", username);
       navigate("/", { replace: true }); // strip ?token
     }
   }, [isAuthenticated, login, navigate]);
@@ -288,9 +292,91 @@ export default function App() {
 		window.history.replaceState({}, "", next);
 	  }
 	}, []);
+	
+	  //no email handle
+  const [pendingProvider, setPendingProvider] = useState<null | "facebook" | "line" | "twitch" | "google">(null);
+  const [pendingToken, setPendingToken] = useState<string | null>(null);
+
+	useEffect(() => {
+	  const params = new URLSearchParams(window.location.search);
+	  const provider = params.get("oauth_pending") as any;
+	  const ptoken = params.get("pending_token");
+
+	  if (provider && ptoken) {
+		setPendingProvider(provider);
+		setPendingToken(ptoken);
+
+		// strip query params from URL
+		params.delete("oauth_pending");
+		params.delete("pending_token");
+		const next = `${window.location.pathname}${params.toString() ? "?" + params.toString() : ""}`;
+		window.history.replaceState({}, "", next);
+	  }
+	}, []);
+	
+	function UsernameGate() {
+  const { token } = useAuth();
+  const [need, setNeed] = useState(false);
+  const loc = useLocation();
+  const api = import.meta.env.VITE_API_URL;
+
+  // Ob vsakem mountu, menjavi route ali osvežitvi – preveri profil
+  useEffect(() => {
+    const check = async () => {
+      if (!token) {
+        setNeed(false);
+        return;
+      }
+      try {
+        const res = await fetch(`${api}/api/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: "include",
+        });
+        if (!res.ok) {
+          setNeed(false);
+          return;
+        }
+        const me = await res.json(); // { email, username }
+        setNeed(!me?.username);      // če ni username → zahtevaj modal
+      } catch {
+        setNeed(false);
+      }
+    };
+    check();
+  }, [token, loc.pathname]); // ponovno preveri na vsaki navigaciji
+
+  if (!token || !need) return null;
+
+  return (
+    <UsernameModal
+      onSuccess={() => {
+        setNeed(false);
+      }}
+    />
+  );
+}
 
   return (
     <>
+	
+	{pendingProvider && pendingToken && (
+	  <OAuthEmailModal
+		pendingProvider={pendingProvider}
+		pendingToken={pendingToken}
+		onSubmitSuccess={(tok, em, uname) => {
+		  login(tok, em, uname ?? null); // ✅ pass username to AuthContext
+		  setPendingProvider(null);
+		  setPendingToken(null);
+		}}
+		onClose={() => {
+		  setPendingProvider(null);
+		  setPendingToken(null);
+		}}
+	  />
+	)}
+	
+	<UsernameGate />
+	
       {/* Sidebar */}
       {isSidebarVisible && (
 		  <div className={`fixed left-0 top-0 h-screen z-50 transition-all duration-300 ${sidebarWidth}`}>
@@ -335,17 +421,14 @@ export default function App() {
 				 <div className="max-w-[1200px] px-6 mx-auto mb-4 grid md:grid-cols-3 gap-6 py-10 [@media(max-width:767px)]:md:grid-cols-1 [@media(min-width:1px)_and_(max-width:767px)]:justify-center [@media(min-width:1px)_and_(max-width:767px)]:flex [@media(min-width:1px)_and_(max-width:767px)]:text-center">
 				  {/* Column 1 */}
 				  <div>
-					{/*<h2 className="font-bold leading-[120%] text-left text-3xl mybold [@media(min-width:1316px)]:mb-8 [@media(min-width:1300px)]:mb-5 [@media(max-width:1299px)]:mb-5 [@media(max-width:987px)]:mb-0 [@media(min-width:1px)_and_(max-width:767px)]:mb-8 [@media(min-width:1px)_and_(max-width:767px)]:text-center">
-					  Welcome<br />{email}
-					</h2>*/}
 					<div className="flex flex-col justify-center w-full h-full">
 					<VipProgressCard
-  username={email}
-  level="Bronze"
-  wager={8420}
-  nextLevelTarget={100000}
-  isFavorite
-/></div>
+					  username={username?.trim() || email}
+					  level="Bronze"
+					  wager={8420}
+					  nextLevelTarget={100000}
+					  isFavorite
+					/></div>
 				  </div>
 
 				   {/* Column 2 */}
