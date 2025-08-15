@@ -46,51 +46,7 @@ export default function Topbar({
 
   const api = import.meta.env.VITE_API_URL;
 
-  // Cene lahko ostanejo lokalno v Topbar
-  //const [btcPrice, setBtcPrice] = useState(68000);
-  //const [solPrice, setSolPrice] = useState(150);
   const [showBalanceDropdown, setShowBalanceDropdown] = useState(false);
-
-  // 🔁 Fetch iz API-ja -> zapišemo v CurrencyContext (ne v lokalni state)
-  useEffect(() => {
-    const fetchBalances = async () => {
-      if (!isAuthenticated || !token) return;
-
-      try {
-        const [btcRes, solRes, pricesRes] = await Promise.all([
-          fetch(`${api}/api/wallet/btc`, { headers: { Authorization: `Bearer ${token}` } }),
-          fetch(`${api}/api/wallet/sol`, { headers: { Authorization: `Bearer ${token}` } }),
-          fetch(`${api}/api/wallet/prices`),
-        ]);
-
-        let btc = 0;
-        let sol = 0;
-
-        if (btcRes.ok) {
-          const data = await btcRes.json();
-          btc = data.balance || 0;
-        }
-        if (solRes.ok) {
-          const data = await solRes.json();
-          sol = data.balance || 0;
-        }
-
-        // -> tu posodobimo context; Topbar (in ostali) se takoj rerenderajo
-        setBalances({ BTC: btc, SOL: sol });
-
-        
-
-        if (btc <= 0 && sol <= 0) {
-          setSelectedCurrency("BTC");
-          localStorage.setItem("selectedCurrency", "BTC");
-        }
-      } catch (error) {
-        console.error("Error fetching balances:", error);
-      }
-    };
-
-    fetchBalances();
-  }, [token, isAuthenticated, api, setBalances, setSelectedCurrency]);
 
   const balanceDropdownRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
