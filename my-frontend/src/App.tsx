@@ -242,17 +242,36 @@ export default function App() {
 	const topbarLeft = !isSidebarVisible ? "left-0" : isSidebarCollapsed ? "left-20" : "left-64";
 	
 	useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get("token");
-    const email = params.get("email");
-	const username = params.get("username");
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get("token");
+  const email = params.get("email");
+  const username = params.get("username");
 
-    if (token && email && !isAuthenticated) {
-      login(token, email);
-	  if (username) localStorage.setItem("username", username);
-      navigate("/", { replace: true }); // strip ?token
-    }
-  }, [isAuthenticated, login, navigate]);
+  if (token && email) {
+    // login() already stores token/email/username in localStorage
+    login(token, email, username ?? null);
+
+    // strip ?token&email&username from the URL in all cases
+    navigate("/", { replace: true });
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [login, navigate]);
+	
+	useEffect(() => {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get("token");
+  const email = params.get("email");
+  const username = params.get("username");
+
+  if (token && email && !isAuthenticated) {
+    login(token, email, username ?? null);
+  }
+
+  if (token || email || username) {
+    navigate("/", { replace: true });
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [isAuthenticated, login, navigate]);
   
 	{/*LOGIN ERROR USE EFFECT*/}
   

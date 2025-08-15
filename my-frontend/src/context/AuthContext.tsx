@@ -139,6 +139,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
   }, []);
+  
+  useEffect(() => {
+    if (!token) return;
+    if (username) return;
+
+    (async () => {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: "include",
+        });
+        if (!res.ok) return;
+        const me = await res.json(); // { email, username }
+        if (me?.username) {
+          // Pass undefined for email so we don’t overwrite it
+          login(token, undefined, me.username);
+        }
+      } catch {
+        // ignore
+      }
+    })();
+  }, [token, username, login]);
 
   const value = useMemo(
     () => ({
