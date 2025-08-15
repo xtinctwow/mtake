@@ -26,11 +26,16 @@ export default function Login() {
       const data = await res.json();
 
       if (res.ok) {
-        login(data.token, data.email);
-        navigate("/");
-      } else {
-        setMessage(data.message || "Login failed");
-      }
+	  login(data.token, data.email, data.username ?? null);
+	  
+	  if (data.username) {
+		localStorage.setItem("username", data.username); // ✅ save username
+	  }
+	  
+	  navigate("/");
+	} else {
+	  setMessage(data.message || "Login failed");
+	}
     } catch {
       setMessage("Error connecting to server");
     }

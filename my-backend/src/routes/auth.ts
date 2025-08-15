@@ -10,6 +10,8 @@ import { Strategy as LineStrategy } from "passport-line";
 import { Strategy as TwitchStrategy, Profile as TwitchProfile } from "passport-twitch-new";
 import { VerifyCallback } from "passport-oauth2";
 import type { Request } from "express";
+import { authenticateToken } from "../middleware/auth";
+import axios from "axios";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -17,6 +19,8 @@ import { generateCryptoAddress } from "../utils/nowpayments";
 
 const router = express.Router();
 const prisma = new PrismaClient();
+
+type AuthReq = Request & { userId?: number };
 
 /** ---- Env & constants ---- */
 const {
@@ -136,8 +140,9 @@ router.get("/twitch/callback", (req, res, next) => {
 
       const token = signJwt({ id: user.id });
       const emailParam = encodeURIComponent(user.email);
+      const usernameParam = encodeURIComponent((user as any).username || "");
       return res.redirect(
-        `${FRONTEND_BASE_URL}/login?token=${token}&email=${emailParam}`
+		  `${FRONTEND_BASE_URL}/login?token=${token}&email=${emailParam}&username=${usernameParam}`
       );
     }
   )(req, res, next);
@@ -221,7 +226,7 @@ router.get("/line/callback", (req, res, next) => {
       const token = signJwt({ id: user.id });
       const emailParam = encodeURIComponent(user.email);
       return res.redirect(
-        `${FRONTEND_BASE_URL}/login?token=${token}&email=${emailParam}`
+	  `${FRONTEND_BASE_URL}/login?token=${token}&email=${emailParam}`
       );
     }
   )(req, res, next);
@@ -251,7 +256,7 @@ router.post("/register", async (req, res) => {
     await ensureWallet(user.id);
 
     const token = signJwt({ id: user.id });
-    return res.json({ token, email: user.email });
+    return res.json({ token, email: user.email, username: user.username || "" });
   } catch (err) {
     console.error("REGISTER_ERROR:", err);
     return res.status(500).json({ message: "Internal server error" });
@@ -278,7 +283,7 @@ router.post("/login", async (req, res) => {
     if (!valid) return res.status(400).json({ message: "Invalid credentials" });
 
     const token = signJwt({ id: user.id });
-    return res.json({ token, email: user.email });
+    return res.json({ token, email: user.email, username: user.username || "" });
   } catch (err) {
     console.error("LOGIN_ERROR:", err);
     return res.status(500).json({ message: "Internal server error" });
@@ -342,15 +347,16 @@ router.get(
     session: false,
   }),
   (req, res) => {
-    const user = req.user as { id: number; email: string };
-    const token = signJwt({ id: user.id });
-    const emailParam = encodeURIComponent(user.email);
-    res.redirect(`${FRONTEND_BASE_URL}/login?token=${token}&email=${emailParam}`);
-  }
+	  const user = req.user as { id: number; email: string; username?: string };
+	  const token = signJwt({ id: user.id });
+	  const emailParam = encodeURIComponent(user.email);
+	  const usernameParam = encodeURIComponent(user.username || "");
+	  res.redirect(`${FRONTEND_BASE_URL}/login?token=${token}&email=${emailParam}&username=${usernameParam}`);
+	}
 );
 
 /** ----------------------------------------------------------------
- *  Facebook OAuth (stateless)
+ *  Facebook OAuth (stateless, supports no-email accounts)
  *  -------------------------------------------------------------- */
 passport.use(
   new FacebookStrategy(
@@ -360,49 +366,67 @@ passport.use(
       callbackURL: `${API_BASE_URL}/api/auth/facebook/callback`,
       profileFields: [
         "id",
-        "email",           // keep this
+        "emails",
         "name",
         "displayName",
         "picture.type(large)",
       ],
       enableProof: true,
     },
-    // NOTE: use accessToken (not prefixed with _), we need it for Graph fallback
     async (accessToken, _refreshToken, profile, done) => {
       try {
-        // 1) Try emails from profile
+        const facebookId = profile.id;
+
+        // 1) Try to read the email from the profile object
         let emailRaw: string =
           profile.emails?.[0]?.value ||
-          // @ts-ignore – raw data sometimes places email here
           (profile as any)?._json?.email ||
           "";
 
-        // 2) If missing, fetch via Graph API as a fallback
+        // 2) If still missing, fetch via Graph API with the login access token
         if (!emailRaw) {
           try {
-            const url = `https://graph.facebook.com/v19.0/me?fields=id,email&access_token=${encodeURIComponent(
-              accessToken
-            )}`;
-            const resp = await fetch(url);
-            if (resp.ok) {
-              const data = (await resp.json()) as { email?: string };
-              if (data?.email) emailRaw = data.email;
-            } else {
-              // Optional: log response text for debugging
-              const txt = await resp.text();
-              console.warn("FB Graph email fetch failed:", resp.status, txt);
-            }
+            const resp = await axios.get<{ id?: string; email?: string }>(
+              "https://graph.facebook.com/v23.0/me",
+              {
+                params: { fields: "id,email", access_token: accessToken },
+                timeout: 4000,
+              }
+            );
+            const data = resp.data;
+            if (data?.email) emailRaw = data.email;
           } catch (e) {
-            console.warn("FB Graph email fetch error:", e);
+            const err = e as { response?: { data?: unknown }; message?: string };
+            console.warn(
+              "FB Graph fallback failed to fetch email:",
+              err?.response?.data ?? err?.message
+            );
           }
         }
 
-        const email = emailRaw ? normalizeEmail(emailRaw) : null;
+        // 3) If STILL no email: try to log in by providerId (returning users)
+        if (!emailRaw) {
+          const link = await prisma.oAuthAccount.findUnique({
+            where: { providerId: `facebook:${facebookId}` },
+            include: { user: true },
+          });
+          if (link?.user) {
+            return done(null, link.user); // success without email
+          }
 
-        if (!email) {
-          return done(new Error("FACEBOOK_NO_EMAIL"));
+          // New user + no email: pass minimal info to the callback
+          return done(null, {
+            __pendingNoEmail: true,
+            provider: "facebook",
+            providerId: facebookId,
+            displayName: profile.displayName,
+            avatar: profile.photos?.[0]?.value,
+          } as any);
         }
 
+        const email = emailRaw.trim().toLowerCase();
+
+        // 4) With email → upsert user and link provider
         let user = await prisma.user.findUnique({ where: { email } });
         if (!user) {
           user = await prisma.user.create({
@@ -410,6 +434,17 @@ passport.use(
           });
           await ensureWallet(user.id);
         }
+
+        // link provider (idempotent)
+        await prisma.oAuthAccount.upsert({
+          where: { providerId: `facebook:${facebookId}` },
+          update: { userId: user.id },
+          create: {
+            provider: "facebook",
+            providerId: `facebook:${facebookId}`,
+            userId: user.id,
+          },
+        });
 
         return done(null, user);
       } catch (err) {
@@ -420,41 +455,150 @@ passport.use(
   )
 );
 
-// Start Facebook flow — make FB re-prompt for declined permissions
+// Start Facebook flow — re-prompt if the user declined email earlier
 router.get(
   "/facebook",
   passport.authenticate(
     "facebook",
     {
-      scope: ["email"],       // you can add 'public_profile' but it's default
-      authType: "rerequest",  // re-ask if the user declined email before
+      scope: ["public_profile", "email"],
+      authType: "rerequest",
+      return_scopes: true,
       session: false,
-    } as any // TS: authType isn't in AuthenticateOptions
+    } as any
   )
 );
 
-// Facebook callback (you already have this custom handler)
+// Facebook callback (supports pending no-email capture)
 router.get("/facebook/callback", (req, res, next) => {
   passport.authenticate(
     "facebook",
     { session: false },
-    (err: any, user: { id: number; email: string } | false) => {
-      if (err || !user) {
+    (err: any, userOrInfo: any) => {
+      if (err) {
         const msg = (err?.message || "").toLowerCase();
         if (msg.includes("app not active")) {
           return res.redirect(`${FRONTEND_BASE_URL}/?auth_error=facebook_app_inactive`);
         }
-        if (err && err.message === "FACEBOOK_NO_EMAIL") {
-          return res.redirect(`${FRONTEND_BASE_URL}/?auth_error=facebook_no_email`);
-        }
         return res.redirect(`${FRONTEND_BASE_URL}/?auth_error=facebook_auth_failed`);
       }
 
+      // Pending flow: frontend must collect email
+      if (userOrInfo?.__pendingNoEmail) {
+        const pendingToken = jwt.sign(
+          {
+            kind: "oauth_pending",
+            provider: "facebook",
+            providerId: userOrInfo.providerId,
+          },
+          JWT_SECRET!,
+          { expiresIn: "10m" }
+        );
+        const redirect = `${FRONTEND_BASE_URL}/login?oauth_pending=facebook&pending_token=${encodeURIComponent(
+          pendingToken
+        )}`;
+        return res.redirect(redirect);
+      }
+
+      // Normal success
+      const user = userOrInfo as { id: number; email: string; username?: string };
       const token = signJwt({ id: user.id });
       const emailParam = encodeURIComponent(user.email);
-      return res.redirect(`${FRONTEND_BASE_URL}/login?token=${token}&email=${emailParam}`);
+      const usernameParam = encodeURIComponent(user.username || "");
+      return res.redirect(`${FRONTEND_BASE_URL}/login?token=${token}&email=${emailParam}&username=${usernameParam}`);
     }
   )(req, res, next);
+});
+
+/** Complete OAuth when provider didn't return an email */
+router.post("/complete-oauth", async (req, res) => {
+  try {
+    const { pendingToken, email: rawEmail } = req.body || {};
+    if (!pendingToken || !rawEmail) {
+      return res.status(400).json({ message: "pendingToken and email are required." });
+    }
+
+    const payload = jwt.verify(pendingToken, JWT_SECRET!) as {
+      kind: "oauth_pending";
+      provider: "facebook" | "line" | "twitch" | "google";
+      providerId: string;
+      iat: number;
+      exp: number;
+    };
+
+    if (payload.kind !== "oauth_pending") {
+      return res.status(400).json({ message: "Invalid pending token." });
+    }
+
+    const email = normalizeEmail(rawEmail);
+
+    let user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      user = await prisma.user.create({ data: { email, password: "" } });
+      await ensureWallet(user.id);
+    }
+
+    await prisma.oAuthAccount.upsert({
+      where: { providerId: `${payload.provider}:${payload.providerId}` },
+      update: { userId: user.id },
+      create: {
+        provider: payload.provider,
+        providerId: `${payload.provider}:${payload.providerId}`,
+        userId: user.id,
+      },
+    });
+
+    const token = signJwt({ id: user.id });
+    return res.json({ token, email: user.email, username: user.username || "" });
+  } catch (err) {
+    console.error("COMPLETE_OAUTH_ERROR:", err);
+    return res.status(400).json({ message: "Invalid or expired pending token." });
+  }
+});
+
+// GET /api/auth/me
+router.get("/me", authenticateToken, async (req: AuthReq, res) => {
+  const userId = req.userId;
+  if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true, username: true },
+  });
+  if (!user) return res.status(404).json({ message: "User not found" });
+  res.json(user);
+});
+
+// POST /api/auth/set-username
+router.post("/set-username", authenticateToken, async (req: AuthReq, res) => {
+  const userId = req.userId;
+  if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+  try {
+    const raw = (req.body?.username || "") as string;
+    const username = raw.trim().toLowerCase();
+
+    if (!/^[a-z0-9_]{3,16}$/.test(username)) {
+      return res.status(400).json({
+        message:
+          "Username must be 3–16 characters and contain only letters, numbers or underscore.",
+      });
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: { username },
+      select: { email: true, username: true },
+    });
+
+    res.json(updated);
+  } catch (e: any) {
+    if (e?.code === "P2002" && e?.meta?.target?.includes("username")) {
+      return res.status(409).json({ message: "Username is already taken." });
+    }
+    console.error("SET_USERNAME_ERROR:", e);
+    res.status(500).json({ message: "Internal server error" });
+  }
 });
 
 export default router;
