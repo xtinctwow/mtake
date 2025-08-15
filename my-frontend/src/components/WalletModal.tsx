@@ -1,79 +1,112 @@
+// src/components/WalletModal.tsx
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { usePrices } from "../context/PricesContext";
+import { useCurrency } from "../context/CurrencyContext";
 
 export default function WalletModal({ onClose }: { onClose: () => void }) {
   const { token } = useAuth();
-  const { BTC: btcPriceRaw, SOL: solPriceRaw } = usePrices();
-  const btcPrice = btcPriceRaw ?? 0;
-  const solPrice = solPriceRaw ?? 0;
+  const { BTC: btcPrice = 0, SOL: solPrice = 0 } = usePrices();
 
-  const [amount, setAmount] = useState("");
+  // ✅ pull balances from CurrencyContext (single source of truth)
+  const { btcBalance, solBalance, setBalances } = useCurrency();
+
   const [tab, setTab] =
     useState<"overview" | "deposit" | "buy" | "settings">("overview");
-
   const modalRef = useRef<HTMLDivElement>(null);
 
   const [selectedCurrency, setSelectedCurrency] = useState<"btc" | "sol">("btc");
-  const [btcAddress, setBtcAddress] = useState("");
-  const [solAddress, setSolAddress] = useState("");
+
+  // ✅ cache deposit addresses in localStorage to avoid refetches
+  const [btcAddress, setBtcAddress] = useState(
+    () => localStorage.getItem("btcAddress") || ""
+  );
+  const [solAddress, setSolAddress] = useState(
+    () => localStorage.getItem("solAddress") || ""
+  );
   const [copied, setCopied] = useState(false);
 
-  const [btcBalance, setBtcBalance] = useState(0);
-  const [solBalance, setSolBalance] = useState(0);
-
+  const [amount, setAmount] = useState("");
+  const [currency, setCurrency] = useState<"btc" | "sol">("btc");
   const [loading, setLoading] = useState(false);
+
   const api = import.meta.env.VITE_API_URL;
 
   const totalValue = btcBalance * btcPrice + solBalance * solPrice;
 
-  // Fetch wallet once when modal opens (and token changes)
+  /**
+   * Fetch ONLY what we don't already have:
+   * - If balances are already in context, do not refetch them.
+   * - If an address is missing, fetch that currency endpoint once and cache the address.
+   */
   useEffect(() => {
     if (!token) return;
 
     const ac = new AbortController();
+
     (async () => {
-      try {
-        const [btcRes, solRes] = await Promise.all([
+      const jobs: Promise<void>[] = [];
+
+      // If BTC address missing → fetch /btc once (ignore balance if you want)
+      if (!btcAddress) {
+        jobs.push(
           fetch(`${api}/api/wallet/btc`, {
             headers: { Authorization: `Bearer ${token}` },
             signal: ac.signal,
-          }),
+          })
+            .then(async (r) => (r.ok ? r.json() : null))
+            .then((data) => {
+              if (!data) return;
+              if (data.address) {
+                setBtcAddress(data.address);
+                localStorage.setItem("btcAddress", data.address);
+              }
+              // Optional: if you want to refresh balance the FIRST time only
+              if (typeof data.balance === "number") {
+                setBalances({ BTC: data.balance });
+              }
+            })
+            .catch(() => {})
+        );
+      }
+
+      // If SOL address missing → fetch /sol once
+      if (!solAddress) {
+        jobs.push(
           fetch(`${api}/api/wallet/sol`, {
             headers: { Authorization: `Bearer ${token}` },
             signal: ac.signal,
-          }),
-        ]);
-
-        if (btcRes.ok) {
-          const data = await btcRes.json();
-          setBtcBalance(Number(data.balance || 0));
-          if (data.address) setBtcAddress(data.address);
-        }
-        if (solRes.ok) {
-          const data = await solRes.json();
-          setSolBalance(Number(data.balance || 0));
-          if (data.address) setSolAddress(data.address);
-        }
-      } catch (e) {
-        if (!(e instanceof DOMException && e.name === "AbortError")) {
-          console.error("Fetch wallet failed:", e);
-        }
+          })
+            .then(async (r) => (r.ok ? r.json() : null))
+            .then((data) => {
+              if (!data) return;
+              if (data.address) {
+                setSolAddress(data.address);
+                localStorage.setItem("solAddress", data.address);
+              }
+              // Optional: refresh balance first time only
+              if (typeof data.balance === "number") {
+                setBalances({ SOL: data.balance });
+              }
+            })
+            .catch(() => {})
+        );
       }
+
+      if (jobs.length) await Promise.all(jobs);
     })();
 
     return () => ac.abort();
-  }, [token, api]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, api]); // <- don’t depend on address state so we don’t refetch after setting
 
   // Close on outside click
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
-        onClose();
-      }
+    const onDown = (e: MouseEvent) => {
+      if (modalRef.current && !modalRef.current.contains(e.target as Node)) onClose();
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
   }, [onClose]);
 
   const handleDeposit = async () => {
@@ -88,8 +121,7 @@ export default function WalletModal({ onClose }: { onClose: () => void }) {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        // ✅ use the actual selection
-        body: JSON.stringify({ amount: val, pay_currency: selectedCurrency }),
+        body: JSON.stringify({ amount: val, pay_currency: currency }),
       });
       const data = await res.json();
       if (data?.invoice_url) {
@@ -108,7 +140,7 @@ export default function WalletModal({ onClose }: { onClose: () => void }) {
   if (!token) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300 ease-out animate-fade-in">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 transition-opacity duration-300 ease-out animate-fade-in">
       <div
         ref={modalRef}
         className="bg-gray-900 rounded-lg p-6 w-full max-w-md text-white relative transform transition-all duration-300 scale-100"
@@ -167,11 +199,12 @@ export default function WalletModal({ onClose }: { onClose: () => void }) {
                     {btcBalance > 0 && (
                       <tr className="border-t border-gray-700 py-2">
                         <td className="py-2 flex items-center gap-2">
-                          <img
-                            src="https://s2.coinmarketcap.com/static/img/coins/32x32/1.png"
-                            alt="BTC"
-                            className="w-5 h-5"
-                          />
+                          <span className="text-xl">
+                            <img
+                              src="https://s2.coinmarketcap.com/static/img/coins/32x32/1.png"
+                              alt="BTC"
+                            />
+                          </span>
                           <div>
                             <div className="font-semibold">BTC</div>
                             <div className="text-gray-400 text-xs">Bitcoin</div>
@@ -189,11 +222,12 @@ export default function WalletModal({ onClose }: { onClose: () => void }) {
                     {solBalance > 0 && (
                       <tr className="border-t border-gray-700 py-2">
                         <td className="py-2 flex items-center gap-2">
-                          <img
-                            src="https://s2.coinmarketcap.com/static/img/coins/32x32/5426.png"
-                            alt="SOL"
-                            className="w-5 h-5"
-                          />
+                          <span className="text-xl">
+                            <img
+                              src="https://s2.coinmarketcap.com/static/img/coins/32x32/5426.png"
+                              alt="SOL"
+                            />
+                          </span>
                           <div>
                             <div className="font-semibold">SOL</div>
                             <div className="text-gray-400 text-xs">Solana</div>
@@ -260,27 +294,26 @@ export default function WalletModal({ onClose }: { onClose: () => void }) {
                   onClick={() => {
                     const address =
                       selectedCurrency === "btc" ? btcAddress : solAddress;
-                    if (!address) return;
+                    const text = address || "N/A";
                     if (navigator.clipboard && window.isSecureContext) {
-                      navigator.clipboard.writeText(address).then(() => {
+                      navigator.clipboard.writeText(text).then(() => {
                         setCopied(true);
                         setTimeout(() => setCopied(false), 2000);
                       });
                     } else {
-                      const textArea = document.createElement("textarea");
-                      textArea.value = address;
-                      textArea.style.position = "fixed";
-                      document.body.appendChild(textArea);
-                      textArea.focus();
-                      textArea.select();
+                      const ta = document.createElement("textarea");
+                      ta.value = text;
+                      ta.style.position = "fixed";
+                      document.body.appendChild(ta);
+                      ta.focus();
+                      ta.select();
                       try {
                         document.execCommand("copy");
                         setCopied(true);
                         setTimeout(() => setCopied(false), 2000);
-                      } catch {
-                        alert("Could not copy address");
+                      } finally {
+                        document.body.removeChild(ta);
                       }
-                      document.body.removeChild(textArea);
                     }
                   }}
                   className="text-sm text-blue-400 hover:underline"
@@ -299,6 +332,7 @@ export default function WalletModal({ onClose }: { onClose: () => void }) {
                 />
               </div>
             )}
+
             {selectedCurrency === "sol" && solAddress && (
               <div className="flex justify-center">
                 <img
@@ -318,31 +352,17 @@ export default function WalletModal({ onClose }: { onClose: () => void }) {
               </div>
               <p className="mt-2">Credited after 1 confirmation</p>
             </div>
-
-            <div className="flex gap-2">
-              <input
-                className="flex-1 rounded bg-gray-800 border border-gray-700 px-3 py-2 outline-none focus:border-gray-500"
-                placeholder="Amount"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-              />
-              <button
-                onClick={handleDeposit}
-                disabled={loading}
-                className="bg-green-600 hover:bg-green-500 disabled:opacity-60 px-4 rounded"
-              >
-                {loading ? "Creating..." : "Create invoice"}
-              </button>
-            </div>
           </div>
         )}
 
+        {/* Buy */}
         {tab === "buy" && (
           <div className="text-gray-400 text-sm">
             <p>Feature coming soon: Buy crypto directly inside the wallet!</p>
           </div>
         )}
 
+        {/* Settings */}
         {tab === "settings" && (
           <div className="text-gray-400 text-sm">
             <p>2FA, notifications and account limits coming soon...</p>
