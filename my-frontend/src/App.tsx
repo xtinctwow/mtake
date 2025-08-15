@@ -336,22 +336,19 @@ export default function App() {
 	
 	function UsernameGate() {
 	  const { token } = useAuth();
-	  const me = useMe();
+	  const { data: me, ready } = useMe(); // <-- dobimo ready
 	  const [need, setNeed] = useState(false);
+	  const loc = useLocation();
 
+	  // pokaži modal samo, ko SMO preverili (ready)
 	  useEffect(() => {
-		setNeed(!!token && !me?.username);
-	  }, [token, me?.username]);
+		if (!token) { setNeed(false); return; }
+		if (!ready) { setNeed(false); return; }      // še ne vemo → ne težimo
+		setNeed(!me?.username);                      // vemo → pokaži samo, če manjka
+	  }, [token, ready, me?.username, loc.pathname]);
 
-	  if (!need) return null;
-
-	  return (
-		<UsernameModal
-		  onSuccess={() => {
-			setNeed(false);
-		  }}
-		/>
-	  );
+	  if (!token || !need) return null;
+	  return <UsernameModal onSuccess={() => setNeed(false)} />;
 	}
 
   return (

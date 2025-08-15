@@ -607,10 +607,28 @@ router.get("/me", authenticateToken, async (req: AuthReq, res) => {
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { email: true, username: true },
+    select: {
+      email: true,
+      username: true,
+      btcWallet: { select: { balance: true, address: true } },
+      solWallet: { select: { balance: true, address: true } },
+    },
   });
+
   if (!user) return res.status(404).json({ message: "User not found" });
-  res.json(user);
+
+  res.json({
+    email: user.email,
+    username: user.username,
+    balances: {
+      BTC: user.btcWallet?.balance ?? 0,
+      SOL: user.solWallet?.balance ?? 0,
+    },
+    addresses: {
+      BTC: user.btcWallet?.address ?? null,
+      SOL: user.solWallet?.address ?? null,
+    },
+  });
 });
 
 // POST /api/auth/set-username
