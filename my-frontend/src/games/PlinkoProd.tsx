@@ -1,3 +1,4 @@
+// src/games/PlinkoProd.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useCurrency } from "../context/CurrencyContext";
 import { usePrices } from "../context/PricesContext";
@@ -88,13 +89,33 @@ export default function PlinkoProd({
     ball: "#ffa024",
   }), []);
 
+  /* ---------- SOUNDS ---------- */
+  // Datoteke v /public: /bet.mp3, /win.mp3, /pocket.mp3
+  const snd = useMemo(() => {
+    const bet = new Audio("/bet.mp3");
+    const win = new Audio("/win.mp3");
+    const pocket = new Audio("/pocket.mp3");
+    bet.volume = 1;
+    win.volume = 1;
+    pocket.volume = 1;
+    return { bet, win, pocket };
+  }, []);
+  const play = (a: HTMLAudioElement) => {
+    try {
+      const clone = a.cloneNode(true) as HTMLAudioElement;
+      clone.volume = a.volume;
+      clone.currentTime = 0;
+      void clone.play();
+    } catch {}
+  };
+
   /* seeds (commit/reveal) */
   const [seeds, setSeeds] = useState(() => {
     try { return JSON.parse(localStorage.getItem("plinkoSeeds") || "{}"); }
     catch { return {}; }
   }) as [any, any];
 
-  // 🔧 helperji za upravljanje s semeni (reset, randomize, clear)
+  // helperji: reset/random seeds
   const persistSeeds = (next: any) => {
     setSeeds(next);
     localStorage.setItem("plinkoSeeds", JSON.stringify(next));
@@ -104,7 +125,6 @@ export default function PlinkoProd({
       .reduce((a, v) => a + v.toString(16).padStart(2, "0"), "");
 
   const resetSeedsAll = () => {
-    // nov clientSeed, nonce=0, počisti reveal/hash
     persistSeeds({ clientSeed: randomClientSeed(), nonce: 0, serverSeedHash: "", serverSeed: "" });
   };
   const randomizeClientSeed = () => {
@@ -169,70 +189,65 @@ export default function PlinkoProd({
   const [results, setResults] = useState<number[]>([]);
   const table = useMemo(() => buildMultipliers(rows, risk), [rows, risk]);
   const slots = rows + 1;
-  
+
   const [landing, setLanding] = useState<{ slot: number; pulse: number }>({ slot: -1, pulse: 0 });
 
   function animateBall(
-	  id: string,
-	  path: ("L" | "R")[],
-	  finalSlot: number,
-	  mul: number,
-	  onDone?: () => void
-	) {
-	  // koliko časa traja korak med peg-i in začetni delay
-	  const STEP_MS = 140;
-	  const START_DELAY_MS = 150;
-	  const BALL_REMOVE_DELAY_MS = 0; // če želiš, lahko dodaš npr. 300–600 ms
+    id: string,
+    path: ("L" | "R")[],
+    finalSlot: number,
+    mul: number,
+    onDone?: () => void
+  ) {
+    const STEP_MS = 140;
+    const START_DELAY_MS = 150;
+    const BALL_REMOVE_DELAY_MS = 0;
 
-	  let level = 0;
-	  let rights = 0;
+    let level = 0;
+    let rights = 0;
 
-	  // postavi žogico nad sredinski peg prve vrstice (index 1 od 3)
-	  setBalls(bs =>
-		bs.map(b =>
-		  b.id === id
-			? {
-				...b,
-				pos: { x: pegPos(0, 1).x, y: pegPos(0, 1).y - vGap * 0.6 },
-			  }
-			: b
-		)
-	  );
+    setBalls(bs =>
+      bs.map(b =>
+        b.id === id
+          ? { ...b, pos: { x: pegPos(0, 1).x, y: pegPos(0, 1).y - vGap * 0.6 } }
+          : b
+      )
+    );
 
-	  const step = () => {
-		if (level >= path.length) {
-		  finishToSlot();
-		  return;
-		}
-		if (path[level] === "R") rights++;
-		level++;
+    const step = () => {
+      if (level >= path.length) {
+        finishToSlot();
+        return;
+      }
+      if (path[level] === "R") rights++;
+      level++;
 
-		// v vrstici `level` je pegCountAt(level) pegov → uporabimo baseline + rights
-		const p = pegPos(level, rights + 1);
-		setBalls(bs => bs.map(b => (b.id === id ? { ...b, pos: p } : b)));
+      const p = pegPos(level, rights + 1);
+      setBalls(bs => bs.map(b => (b.id === id ? { ...b, pos: p } : b)));
 
-		setTimeout(step, STEP_MS);
-	  };
+      setTimeout(step, STEP_MS);
+    };
 
-	  const finishToSlot = () => {
-		const s = slotPos(finalSlot);
+    const finishToSlot = () => {
+      const s = slotPos(finalSlot);
+      setBalls(bs => bs.map(b => (b.id === id ? { ...b, pos: s, done: true } : b)));
+      setResults(rs => [mul, ...rs].slice(0, 12));
 
-		// prestavi žogico v žep in zabeleži rezultat za desni “score” stolpec
-		setBalls(bs => bs.map(b => (b.id === id ? { ...b, pos: s, done: true } : b)));
-		setResults(rs => [mul, ...rs].slice(0, 12));
+      // 🔊 zvok ob pristanku (<=2x pocket, >2x win)
+      if (mul > 2) play(snd.win);
+      else play(snd.pocket);
 
-		// 🔔 sproži vizualni “pulse” žepka (predvidevaš, da imaš nekje `const [landing, setLanding] = useState({slot:-1, pulse:0})`)
-		setLanding(prev => ({ slot: finalSlot, pulse: prev.pulse + 1 }));
+      // vizualni pulse žepka
+      setLanding(prev => ({ slot: finalSlot, pulse: prev.pulse + 1 }));
 
-		// odstrani žogico, nato poravnaj bilanco (onSettle)
-		setTimeout(() => {
-		  setBalls(bs => bs.filter(b => b.id !== id).slice(-60));
-		  onDone?.();
-		}, BALL_REMOVE_DELAY_MS);
-	  };
+      setTimeout(() => {
+        setBalls(bs => bs.filter(b => b.id !== id).slice(-60));
+        onDone?.();
+      }, BALL_REMOVE_DELAY_MS);
+    };
 
-	  setTimeout(step, START_DELAY_MS);
-	}
+    setTimeout(step, START_DELAY_MS);
+  }
 
   async function dropOne() {
     setBetError(null);
@@ -240,6 +255,9 @@ export default function PlinkoProd({
       setBetError(`Bet must be between ${minBet} and ${maxBet}.`);
       return;
     }
+
+    // 🔊 BET zvok takoj po kliku (user gesture)
+    play(snd.bet);
 
     const id = crypto.randomUUID();
     setBalls(bs => [...bs, { id, pos: { x: pegPos(0, 1).x, y: pegPos(0, 1).y - vGap * 0.6 }, done: false, bornAt: Date.now() }]);
@@ -298,16 +316,54 @@ export default function PlinkoProd({
     const p = binom(nRows, index) / Math.pow(2, nRows);
     return p * 100;
   }
+
+  /* ---------- MULTICOLOR barvna lestvica (rumena → oranžna → rdeča) ---------- */
+  const COLOR_STOPS: Array<{ pos: number; c: [number, number, number] }> = useMemo(() => ([
+    { pos: 0.0,  c: [245, 197,  66] }, // rumena
+    { pos: 0.01, c: [255, 144,  16] }, // oranžna (vmesna) rgb(255, 144, 16)
+    { pos: 1.0,  c: [235,  38,  32] }, // rdeča
+  ]), []);
+  const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+  const mix = (a: [number,number,number], b: [number,number,number], t: number): [number,number,number] =>
+    [0,1,2].map(i => Math.round(lerp(a[i], b[i], t))) as [number,number,number];
+
   function colorForMultiplier(m: number, table: number[], decimals = 2) {
     const min = Math.min(...table);
     const max = Math.max(...table);
     const q   = Number(m.toFixed(decimals));
-    const t   = (q - min) / Math.max(1e-12, max - min);
-    const from = [245, 197, 66];
-    const to   = [235, 38, 32];
-    const c = from.map((f, i) => Math.round(f + (to[i] - f) * t));
-    return `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
+    const t0  = (q - min) / Math.max(1e-12, max - min);
+    const t   = Math.max(0, Math.min(1, t0)); // clamp
+
+    // najdi segment med stopnjama in interno normiraj
+    let idx = 0;
+    while (idx < COLOR_STOPS.length - 2 && t > COLOR_STOPS[idx + 1].pos) idx++;
+    const a = COLOR_STOPS[idx];
+    const b = COLOR_STOPS[idx + 1];
+    const lt = (t - a.pos) / Math.max(1e-12, (b.pos - a.pos));
+
+    const [r,g,b_] = mix(a.c, b.c, lt);
+    return `rgb(${r}, ${g}, ${b_})`;
   }
+  
+  function colorForMultiplierRgb(m: number, table: number[], decimals = 2): [number, number, number] {
+  const min = Math.min(...table);
+  const max = Math.max(...table);
+  const q   = Number(m.toFixed(decimals));
+  const t0  = (q - min) / Math.max(1e-12, max - min);
+  const t   = Math.max(0, Math.min(1, t0));
+
+  const STOPS = [
+    { pos: 0.0,  c: [245, 197,  66] as [number,number,number] }, // rumena
+    { pos: 0.01, c: [255, 144,  16] as [number,number,number] }, // oranžna
+    { pos: 1.0,  c: [235,  38,  32] as [number,number,number] }, // rdeča
+  ];
+  let idx = 0;
+  while (idx < STOPS.length - 2 && t > STOPS[idx + 1].pos) idx++;
+  const a = STOPS[idx], b = STOPS[idx + 1];
+  const lt = (t - a.pos) / Math.max(1e-12, (b.pos - a.pos));
+  const mix = (x: number, y: number, k: number) => Math.round(x + (y - x) * k);
+  return [mix(a.c[0], b.c[0], lt), mix(a.c[1], b.c[1], lt), mix(a.c[2], b.c[2], lt)];
+}
 
   /* ------------------------------ UI ------------------------------ */
   return (
@@ -361,8 +417,9 @@ export default function PlinkoProd({
       clamp={clamp}
       fmt8={fmt8}
       ROWS_OPTIONS={ROWS_OPTIONS}
-	  landingSlot={landing.slot}
+      landingSlot={landing.slot}
       landingPulse={landing.pulse}
+	  colorForMultiplierRgb={colorForMultiplierRgb}
     />
   );
 }

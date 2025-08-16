@@ -57,6 +57,7 @@ type Props = {
   chancePct: (index: number) => number;
 
   colorForMultiplier: (m: number, table: number[], decimals?: number) => string;
+  colorForMultiplierRgb: (m: number, table: number[], decimals?: number) => [number, number, number];
   clamp: (n: number, mi: number, ma: number) => number;
   fmt8: (n: number) => string;
   ROWS_OPTIONS: readonly number[];
@@ -93,7 +94,7 @@ export default function PlinkoProdUI({
   boardWrapRef, boardW, boardH, wrapW, hGap, vGap, pegPos, slotPos,
   balls, results, slots, table,
   hoverSlot, setHoverSlot, chancePct,
-  colorForMultiplier, clamp, fmt8, ROWS_OPTIONS, landingSlot, landingPulse,
+  colorForMultiplier, colorForMultiplierRgb, clamp, fmt8, ROWS_OPTIONS, landingSlot, landingPulse,
 }: Props) {
   return (
     <div className="w-full" style={{ backgroundColor: theme.appBg, color: theme.text }}>
@@ -244,7 +245,7 @@ export default function PlinkoProdUI({
           {/* RIGHT: BOARD (brez sprememb prikaza) */}
           <div
             className="rounded-xl border relative overflow-hidden"
-            style={{ backgroundColor: theme.panel, borderColor: theme.border, minHeight: 520 }}
+            style={{ backgroundColor: theme.panel, borderColor: theme.border, minHeight: 520, maxHeight: 720 }}
           >
             <div ref={boardWrapRef} className="relative mx-auto w-full" style={{ maxWidth: 980 }}>
               <div className="relative mx-auto" style={{ width: boardW, height: boardH, marginTop: 12 }}>
@@ -302,18 +303,10 @@ export default function PlinkoProdUI({
 				  const isHover = hoverSlot === i;
 
 				  const mult = table[i]!;
-				  const min  = Math.min(...table);
-				  const max  = Math.max(...table);
-				  const q    = Number(mult.toFixed(2));
-				  const t    = (q - min) / Math.max(1e-12, max - min);
 
-				  const from = [245, 197, 66] as [number, number, number];
-				  const to   = [235,  38, 32] as [number, number, number];
-
-				  const base   = from.map((f, k) => Math.round(f + (to[k] - f) * t)) as [number, number, number];
-				  const bg     = `rgb(${base[0]}, ${base[1]}, ${base[2]})`;
-				  const shade  = darkenRgb(base, 0.25);
-				  const shadow = `rgba(${shade[0]}, ${shade[1]}, ${shade[2]}, 0.9)`;
+				  const [r, g, b] = colorForMultiplierRgb(mult, table, 2);
+				  const bg = `rgb(${r}, ${g}, ${b})`;
+				  const shadow = `rgba(${Math.round(r * 0.75)}, ${Math.round(g * 0.75)}, ${Math.round(b * 0.75)}, 0.9)`;
 
 				  const isLanding = landingSlot === i;
 				  const pocketKey = isLanding ? `p-${i}-${landingPulse}` : `p-${i}`;
@@ -330,7 +323,6 @@ export default function PlinkoProdUI({
 						  height: ph,
 						  lineHeight: 1,
 						  color: "#111",
-						  // med pristankom poskrbimo, da je nad žogico
 						  zIndex: isLanding ? 50 : (isHover ? 11 : 1),
 						  position: "absolute",
 						  overflow: "visible",
@@ -363,7 +355,7 @@ export default function PlinkoProdUI({
 						</span>
 					  </div>
 
-					  {/* tooltip */}
+					  {/* tooltip ... (ostane nespremenjen) */}
 					  {isHover && (() => {
 						const tipW = Math.min(440, Math.max(340, wrapW * 0.6));
 						const tipH = 74;
@@ -428,27 +420,48 @@ export default function PlinkoProdUI({
 				  );
 				})}
               </div>
+				{/* Right column results */}
+				<div className="absolute right-4 !top-[20%] -translate-y-1/2">
+				  <div
+					className="flex flex-col gap-1 rounded-xl p-1"
+					style={{ background: theme.panelSoft, border: `1px solid ${theme.border}` }}
+				  >
+					{results.slice(0, 8).map((m, i) => {
+					  // NOVO: multicolor (rumena → oranžna → rdeča) + senca iz iste barve
+					  const [r, g, b] = colorForMultiplierRgb(m, table, 2);
+					  const bg = `rgb(${r}, ${g}, ${b})`;
+					  const shadow = `rgba(${Math.round(r * 0.75)}, ${Math.round(g * 0.75)}, ${Math.round(b * 0.75)}, 0.9)`;
 
-              {/* Footer */}
-              <div className="absolute left-4 bottom-4 text-xs" style={{ color: theme.subtext }}>
-                Min {minBet} · Max {maxBet}
-              </div>
+					  return (
+						<div
+						  key={i}
+						  className="min-w-[64px] text-center text-sm font-bold rounded-md px-3 py-1"
+						  style={{
+							background: bg,
+							color: "#111",
+							border: "1px solid rgba(0,0,0,.15)",
+							boxShadow: `0 2px 0 ${shadow} inset`,
+						  }}
+						>
+						  {m.toFixed(m >= 10 ? 0 : 2)}×
+						</div>
+					  );
+					})}
 
-              {/* Right column results */}
-              <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                <div className="flex flex-col gap-1 rounded-xl p-1" style={{ background: "#f4b400", boxShadow: "0 2px 0 rgba(0,0,0,.25) inset" }}>
-                  {results.slice(0, 8).map((m, i) => (
-                    <div key={i} className="min-w-[64px] text-center text-sm font-bold rounded-md px-3 py-1" style={{ background: "rgba(0,0,0,.08)", color: "#111", border: "1px solid rgba(0,0,0,.15)" }}>
-                      {m.toFixed(m >= 10 ? 0 : 1)}×
-                    </div>
-                  ))}
-                  {results.length === 0 && (
-                    <div className="min-w-[64px] text-center text-sm font-bold rounded-md px-3 py-2 opacity-70" style={{ background: "rgba(0,0,0,.06)", color: "#111", border: "1px solid rgba(0,0,0,.15)" }}>
-                      —
-                    </div>
-                  )}
-                </div>
-              </div>
+					{results.length === 0 && (
+					  <div
+						className="min-w-[64px] text-center text-sm font-bold rounded-md px-3 py-2 opacity-70"
+						style={{
+						  background: "rgba(0,0,0,.06)",
+						  color: "#111",
+						  border: "1px solid rgba(0,0,0,.15)",
+						}}
+					  >
+						—
+					  </div>
+					)}
+				  </div>
+				</div>
             </div>
           </div>
           {/* /RIGHT */}
