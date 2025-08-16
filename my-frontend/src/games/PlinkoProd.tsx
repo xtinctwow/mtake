@@ -1,4 +1,3 @@
-// src/games/PlinkoProd.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useCurrency } from "../context/CurrencyContext";
 import { usePrices } from "../context/PricesContext";
@@ -9,8 +8,8 @@ type PlaceResp = { roundId: string; clientSeed: string; nonce: number; serverSee
 type ResolveResp = {
   serverSeed: string;
   payout: number;
-  index: number;                 // 0..rows (slot)
-  path: ("L" | "R")[];           // length == rows
+  index: number;
+  path: ("L" | "R")[];
   rows: number;
   risk: "low" | "medium" | "high";
   multiplier: number;
@@ -22,15 +21,13 @@ type Props = {
     seeds: { clientSeed: string; nonce?: number }
   ) => Promise<PlaceResp>;
   onResolve: (roundId: string) => Promise<ResolveResp>;
-  onSettle: (roundId: string) => void;        // ← poravnava balance po animaciji
+  onSettle: (roundId: string) => void;
   minBet: number;
   maxBet: number;
   houseEdge: number;
 };
 
-/* ------------------------------------------------------------------
- *  Stake opis: min/max po rows & risk → generiramo payout tabelo
- * ------------------------------------------------------------------ */
+/* --- payout table helpers (skrajšano, isto kot prej) --- */
 const STAKE_RANGE: Record<"low" | "medium" | "high", Record<number, { min: number; max: number }>> = {
   low:    { 8:{min:0.5,max:5.6}, 9:{min:0.7,max:5.6}, 10:{min:0.5,max:8.9}, 11:{min:0.7,max:8.4}, 12:{min:0.5,max:10},
             13:{min:0.7,max:8.1}, 14:{min:0.5,max:7.1}, 15:{min:0.7,max:15}, 16:{min:0.5,max:16} },
@@ -39,7 +36,6 @@ const STAKE_RANGE: Record<"low" | "medium" | "high", Record<number, { min: numbe
   high:   { 8:{min:0.2,max:29}, 9:{min:0.2,max:43}, 10:{min:0.2,max:76}, 11:{min:0.2,max:120}, 12:{min:0.2,max:170},
             13:{min:0.2,max:260}, 14:{min:0.2,max:420}, 15:{min:0.2,max:620}, 16:{min:0.2,max:1000} },
 };
-
 const LOW_8_EXACT = [5.6, 2.1, 1.1, 1.0, 0.5, 1.0, 1.1, 2.1, 5.6];
 const GAMMA: Record<"low" | "medium" | "high", number> = { low: 1.7, medium: 1.35, high: 1.15 };
 
@@ -98,6 +94,29 @@ export default function PlinkoProd({
     catch { return {}; }
   }) as [any, any];
 
+  // 🔧 helperji za upravljanje s semeni (reset, randomize, clear)
+  const persistSeeds = (next: any) => {
+    setSeeds(next);
+    localStorage.setItem("plinkoSeeds", JSON.stringify(next));
+  };
+  const randomClientSeed = () =>
+    crypto.getRandomValues(new Uint8Array(16))
+      .reduce((a, v) => a + v.toString(16).padStart(2, "0"), "");
+
+  const resetSeedsAll = () => {
+    // nov clientSeed, nonce=0, počisti reveal/hash
+    persistSeeds({ clientSeed: randomClientSeed(), nonce: 0, serverSeedHash: "", serverSeed: "" });
+  };
+  const randomizeClientSeed = () => {
+    persistSeeds({ ...(seeds as any), clientSeed: randomClientSeed(), nonce: 0 });
+  };
+  const resetNonce = () => {
+    persistSeeds({ ...(seeds as any), nonce: 0 });
+  };
+  const clearReveals = () => {
+    persistSeeds({ ...(seeds as any), serverSeedHash: "", serverSeed: "" });
+  };
+
   /* controls */
   const [betStr, setBetStr] = useState("0.00000000");
   const bet = useMemo(() => {
@@ -107,7 +126,10 @@ export default function PlinkoProd({
   const [rows, setRows] = useState<number>(12);
   const [risk, setRisk] = useState<"low" | "medium" | "high">("medium");
 
-  /* ---------- Responsive board sizing ---------- */
+  /* input error (npr. insufficient funds) */
+  const [betError, setBetError] = useState<string | null>(null);
+
+  /* sizing */
   const boardWrapRef = useRef<HTMLDivElement | null>(null);
   const [wrapW, setWrapW] = useState(720);
   useEffect(() => {
@@ -123,85 +145,103 @@ export default function PlinkoProd({
 
   // geometry
   const margin = 28;
-  const hGap = useMemo(() => (wrapW - margin * 2) / (rows + 2), [wrapW, rows]); // +2 zaradi novega razporeda
+  const hGap = useMemo(() => (wrapW - margin * 2) / (rows + 2), [wrapW, rows]);
   const vGap = hGap;
   const centerX = useMemo(() => wrapW / 2, [wrapW]);
   const boardW = useMemo(() => wrapW, [wrapW]);
   const boardH = useMemo(() => margin * 2 + (rows - 1) * vGap + Math.max(56, vGap * 2.3), [rows, vGap, margin]);
 
-  /* ----------- NOV RAZPORED PEGOV: prva 3, druga 4, potem 5,6,... ----------- */
-  const pegCountAt = (r: number) => r + 3; // 0→3, 1→4, ..., (rows-1)→rows+2
-
-  // pozicija pega v vrstici r na indeksu i (0..pegCountAt(r)-1)
+  const pegCountAt = (r: number) => r + 3;
   const pegPos = (r: number, i: number) => {
     const cnt = pegCountAt(r);
-    return {
-      x: centerX + (i - (cnt - 1) / 2) * hGap,
-      y: margin + r * vGap,
-    };
+    return { x: centerX + (i - (cnt - 1) / 2) * hGap, y: margin + r * vGap };
   };
-
-  // center žepka i (0..rows) — med peg-i zadnje vrstice
   const slotPos = (i: number) => {
-    const lastCnt = pegCountAt(rows - 1); // = rows + 2
-    const x = centerX + ((i + 0.5) - (lastCnt - 1) / 2) * hGap; // točno med peg-i
+    const lastCnt = pegCountAt(rows - 1);
+    const x = centerX + ((i + 0.5) - (lastCnt - 1) / 2) * hGap;
     const y = margin + (rows - 1) * vGap + vGap * 0.68;
     return { x, y };
   };
 
-  /* balls (concurrent – ne prekinjamo starih) */
+  /* balls & results */
   type Ball = { id: string; pos: { x: number; y: number }; done: boolean; bornAt: number };
   const [balls, setBalls] = useState<Ball[]>([]);
   const [results, setResults] = useState<number[]>([]);
   const table = useMemo(() => buildMultipliers(rows, risk), [rows, risk]);
   const slots = rows + 1;
+  
+  const [landing, setLanding] = useState<{ slot: number; pulse: number }>({ slot: -1, pulse: 0 });
 
-  // animacija: start nad SREDINSKIM pegom 1. vrstice (index 1 od 3)
   function animateBall(
-    id: string,
-    path: ("L" | "R")[],
-    finalSlot: number,
-    mul: number,
-    onDone?: () => void             // ← callback po pristanku
-  ) {
-    let level = 0, rights = 0;
+	  id: string,
+	  path: ("L" | "R")[],
+	  finalSlot: number,
+	  mul: number,
+	  onDone?: () => void
+	) {
+	  // koliko časa traja korak med peg-i in začetni delay
+	  const STEP_MS = 140;
+	  const START_DELAY_MS = 150;
+	  const BALL_REMOVE_DELAY_MS = 0; // če želiš, lahko dodaš npr. 300–600 ms
 
-    setBalls(bs => bs.map(b =>
-      b.id === id ? { ...b, pos: { x: pegPos(0, 1).x, y: pegPos(0, 1).y - vGap * 0.6 } } : b
-    ));
+	  let level = 0;
+	  let rights = 0;
 
-    const step = () => {
-      if (level >= path.length) { finishToSlot(); return; }
-      if (path[level] === "R") rights++;
-      level++;
-      // v vrstici "level" je pegCountAt(level) pegov → uporabimo baseline + rights
-      const p = pegPos(level, rights + 1);
-      setBalls(bs => bs.map(b => (b.id === id ? { ...b, pos: p } : b)));
-      setTimeout(step, 140);
-    };
+	  // postavi žogico nad sredinski peg prve vrstice (index 1 od 3)
+	  setBalls(bs =>
+		bs.map(b =>
+		  b.id === id
+			? {
+				...b,
+				pos: { x: pegPos(0, 1).x, y: pegPos(0, 1).y - vGap * 0.6 },
+			  }
+			: b
+		)
+	  );
 
-    const finishToSlot = () => {
-      const s = slotPos(finalSlot);
-      setBalls(bs => bs.map(b => b.id === id ? { ...b, pos: s, done: true } : b));
-      setResults(rs => [mul, ...rs].slice(0, 12));
-      // odstrani žogico in šele nato sproži onDone (poravnava)
-      setTimeout(() => {
-        setBalls(bs => bs.filter(b => b.id !== id).slice(-60));
-        onDone?.();
-      }, 0);
-    };
+	  const step = () => {
+		if (level >= path.length) {
+		  finishToSlot();
+		  return;
+		}
+		if (path[level] === "R") rights++;
+		level++;
 
-    setTimeout(step, 150);
-  }
+		// v vrstici `level` je pegCountAt(level) pegov → uporabimo baseline + rights
+		const p = pegPos(level, rights + 1);
+		setBalls(bs => bs.map(b => (b.id === id ? { ...b, pos: p } : b)));
+
+		setTimeout(step, STEP_MS);
+	  };
+
+	  const finishToSlot = () => {
+		const s = slotPos(finalSlot);
+
+		// prestavi žogico v žep in zabeleži rezultat za desni “score” stolpec
+		setBalls(bs => bs.map(b => (b.id === id ? { ...b, pos: s, done: true } : b)));
+		setResults(rs => [mul, ...rs].slice(0, 12));
+
+		// 🔔 sproži vizualni “pulse” žepka (predvidevaš, da imaš nekje `const [landing, setLanding] = useState({slot:-1, pulse:0})`)
+		setLanding(prev => ({ slot: finalSlot, pulse: prev.pulse + 1 }));
+
+		// odstrani žogico, nato poravnaj bilanco (onSettle)
+		setTimeout(() => {
+		  setBalls(bs => bs.filter(b => b.id !== id).slice(-60));
+		  onDone?.();
+		}, BALL_REMOVE_DELAY_MS);
+	  };
+
+	  setTimeout(step, START_DELAY_MS);
+	}
 
   async function dropOne() {
+    setBetError(null);
     if (bet !== 0 && (bet < minBet || bet > maxBet)) {
-      alert(`Bet must be between ${minBet} and ${maxBet}.`);
+      setBetError(`Bet must be between ${minBet} and ${maxBet}.`);
       return;
     }
 
     const id = crypto.randomUUID();
-    // postavi začetno žogico nad sredinski peg (index 1)
     setBalls(bs => [...bs, { id, pos: { x: pegPos(0, 1).x, y: pegPos(0, 1).y - vGap * 0.6 }, done: false, bornAt: Date.now() }]);
 
     try {
@@ -216,7 +256,7 @@ export default function PlinkoProd({
         return next;
       });
 
-      const res = await onResolve(placed.roundId); // <- backend NE kreditira (credit:false v Page)
+      const res = await onResolve(placed.roundId);
       setSeeds((s: any) => {
         const next = { ...s, serverSeed: res.serverSeed };
         localStorage.setItem("plinkoSeeds", JSON.stringify(next));
@@ -226,13 +266,16 @@ export default function PlinkoProd({
       const tableForRound = buildMultipliers(res.rows, res.risk);
       const computedMul = tableForRound?.[res.index] ?? res.multiplier;
 
-      // Bilanco poravnamo šele po pristanku
       animateBall(id, res.path, res.index, computedMul, () => onSettle(placed.roundId));
-
     } catch (e: any) {
-      console.error(e);
-      alert(e?.message || "Plinko failed");
       setBalls(bs => bs.filter(b => b.id !== id));
+      const msg = (e && e.message) ? String(e.message) : "";
+      if (/insufficient/i.test(msg)) {
+        setBetError("Insufficient balance");
+        return;
+      }
+      console.error(e);
+      setBetError("Something went wrong. Try again.");
     }
   }
 
@@ -242,8 +285,6 @@ export default function PlinkoProd({
   }, [bet, prices, selectedCurrency]);
 
   const [showFair, setShowFair] = useState(false);
-  
-  // --- helperji za verjetnost in hover stanje ---
   const [hoverSlot, setHoverSlot] = useState<number | null>(null);
 
   function binom(n: number, k: number) {
@@ -253,20 +294,15 @@ export default function PlinkoProd({
     for (let i = 1; i <= k; i++) res = (res * (n - k + i)) / i;
     return res;
   }
-
   function chancePct(index: number, nRows = rows) {
     const p = binom(nRows, index) / Math.pow(2, nRows);
     return p * 100;
   }
-
-  // Barva po multiplikatorju (kvantiziramo na 2 dec. da se "0.46x" vedno pobarva enako)
   function colorForMultiplier(m: number, table: number[], decimals = 2) {
     const min = Math.min(...table);
     const max = Math.max(...table);
-    const q   = Number(m.toFixed(decimals));           // poravnaj na prikaz
-    const t   = (q - min) / Math.max(1e-12, max - min); // 0..1
-
-    // center (min) → rumena, rob (max) → rdeča
+    const q   = Number(m.toFixed(decimals));
+    const t   = (q - min) / Math.max(1e-12, max - min);
     const from = [245, 197, 66];
     const to   = [235, 38, 32];
     const c = from.map((f, i) => Math.round(f + (to[i] - f) * t));
@@ -281,20 +317,27 @@ export default function PlinkoProd({
       prices={prices}
 
       betStr={betStr}
-      setBetStr={setBetStr}
+      setBetStr={(v) => { setBetError(null); setBetStr(v); }}
+      betError={betError}
       betUsd={betUsd}
       minBet={minBet}
       maxBet={maxBet}
 
       risk={risk}
-      setRisk={setRisk}
+      setRisk={(r) => { setBetError(null); setRisk(r); }}
       rows={rows}
-      setRows={setRows}
+      setRows={(r) => { setBetError(null); setRows(r); }}
       dropOne={dropOne}
 
       showFair={showFair}
       setShowFair={setShowFair}
       seeds={seeds}
+
+      /* fairness actions */
+      onResetSeedsAll={resetSeedsAll}
+      onRandomizeClientSeed={randomizeClientSeed}
+      onResetNonce={resetNonce}
+      onClearReveals={clearReveals}
 
       boardWrapRef={boardWrapRef}
       boardW={boardW}
@@ -318,6 +361,8 @@ export default function PlinkoProd({
       clamp={clamp}
       fmt8={fmt8}
       ROWS_OPTIONS={ROWS_OPTIONS}
+	  landingSlot={landing.slot}
+      landingPulse={landing.pulse}
     />
   );
 }
