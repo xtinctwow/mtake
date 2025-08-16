@@ -126,3 +126,7 @@ body{
 .customround{
 	border-radius:25px;
 }
+.cyere-num {
+  font-family: 'cyere-semibold', ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-variant-numeric: tabular-nums; /* ohrani enako širino številk, če font podpira */
+}

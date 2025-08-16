@@ -25,6 +25,7 @@ import BaccaratPage from "./pages/BaccaratPage";
 import OAuthEmailModal from "./components/OAuthEmailModal";
 import UsernameModal from "./components/UsernameModal";
 import { useMe } from "./context/MeContext";
+import PlinkoPage from "./pages/PlinkoPage";
 
 import {
   FaBars, FaGift, FaUsers, FaCrown, FaBook, FaShieldAlt, FaHeadset, FaGlobe,
@@ -606,6 +607,7 @@ export default function App() {
                     <GameCard title="Limbo" players={3849} img="/limbo_originals.jpg" url="/casino/games/limbo" />
                     <GameCard title="Blackjack" players={632} img="/bj_originals.jpg" url="/casino/games/blackjack" />
                     <GameCard title="Baccarat" players={632} img="/bacca_originals.jpg" url="/casino/games/baccarat" />
+					<GameCard title="Plinko" players={1123} img="/plinko_originals.jpg" url="/casino/games/plinko" />
                   </div>
                 </section>
 
@@ -617,6 +619,7 @@ export default function App() {
                     <GameCard title="Limbo" players={3849} img="/limbo_originals.jpg" url="/casino/games/limbo" />
                     <GameCard title="Blackjack" players={632} img="/bj_originals.jpg" url="/casino/games/blackjack" />
                     <GameCard title="Baccarat" players={3456} img="/bacca_originals.jpg" url="/casino/games/baccarat" />
+					<GameCard title="Plinko" players={1123} img="/plinko_originals.jpg" url="/casino/games/plinko" />
                   </div>
                 </section>
               </main>
@@ -634,6 +637,7 @@ export default function App() {
 		  <Route path="/privacy" element={<Privacy />} />
 		  <Route path="/anti-money-laundering" element={<AML />} />
 		  <Route path="/data-deletion" element={<Privacy />} />
+		  <Route path="casino/games/plinko" element={<PlinkoPage />} />
         </Routes>
       </div>
 	  

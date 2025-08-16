@@ -1,80 +1,94 @@
+// src/components/Topbar.tsx
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useCurrency } from "../context/CurrencyContext";
 import {
-  FaDice, FaWallet, FaUserShield, FaCrown, FaUsers, FaChartBar,
+  FaWallet, FaUserShield, FaCrown, FaUsers, FaChartBar,
   FaExchangeAlt, FaClipboardList, FaCog, FaLightbulb, FaHeadset,
   FaSignOutAlt, FaBell, FaUserCircle, FaSearch
 } from "react-icons/fa";
 import logo from "../assets/cyebe-logo-web.png";
-
 import { usePrices } from "../context/PricesContext";
 
+type Cur = "BTC" | "SOL";
+
+/* --- Tiny easing + rAF number tween --- */
+function useAnimatedNumber(target: number, duration = 400) {
+  const [value, setValue] = useState<number>(target);
+  useEffect(() => {
+    let raf = 0;
+    let start = 0;
+    const from = value;
+    const delta = target - from;
+    if (!isFinite(delta) || duration <= 0) {
+      setValue(target);
+      return;
+    }
+    const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+    const step = (t: number) => {
+      if (!start) start = t;
+      const p = Math.min(1, (t - start) / duration);
+      setValue(from + delta * easeOutCubic(p));
+      if (p < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target, duration]);
+  return value;
+}
+
+function BalanceTicker({ value, currency }: { value: number; currency: Cur }) {
+  const anim = useAnimatedNumber(value, 400);
+  return (
+    <span className="cyere-num">
+      {anim.toFixed(8)} {currency}
+    </span>
+  );
+}
+
 export default function Topbar({
-  balance,           // (ne uporabljaš več, lahko pustiš ali odstraniš iz propsov)
   onWalletClick,
 }: {
-  balance: string;
   onWalletClick: () => void;
 }) {
-  const { isAuthenticated, logout, token } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
 
-  // 🔄 PREJ: lokalni state-i za balance
-  // ZDAJ: beremo iz CurrencyContext
   const {
     selectedCurrency,
     setSelectedCurrency,
     btcBalance,
     solBalance,
-    setBalances,       // <- API rezultate porinemo v context
   } = useCurrency();
-  
-  const { BTC: btcPrice, SOL: solPrice } = usePrices();
+
+  const { BTC: btcPrice = 0, SOL: solPrice = 0 } = usePrices();
 
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showBalanceDropdown, setShowBalanceDropdown] = useState(false);
 
   const userMenuRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
-
-  const handleLogout = () => {
-    logout();
-    navigate("/");
-  };
-
-  const api = import.meta.env.VITE_API_URL;
-
-  const [showBalanceDropdown, setShowBalanceDropdown] = useState(false);
-
   const balanceDropdownRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        balanceDropdownRef.current &&
-        !balanceDropdownRef.current.contains(event.target as Node)
-      ) {
-        setShowBalanceDropdown(false);
-      }
+      const t = event.target as Node;
+      if (userMenuRef.current && !userMenuRef.current.contains(t)) setShowUserMenu(false);
+      if (notificationsRef.current && !notificationsRef.current.contains(t)) setShowNotifications(false);
+      if (balanceDropdownRef.current && !balanceDropdownRef.current.contains(t)) setShowBalanceDropdown(false);
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Close dropdowns on outside click
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
-        setShowUserMenu(false);
-      }
-      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
-        setShowNotifications(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  const handleLogout = () => { logout(); navigate("/"); };
+
+  // za prikaz v gumbu zraven Wallet
+  const shownCurrency = selectedCurrency as Cur;
+  const shownBalance = shownCurrency === "BTC" ? btcBalance : solBalance;
 
   return (
     <header className="topbarbg text-white relative z-50 boxshadow">
@@ -88,79 +102,53 @@ export default function Topbar({
           {/* CENTER - BALANCE & WALLET */}
           {isAuthenticated && (
             <div className="absolute left-1/2 -translate-x-1/2 flex items-center space-x-4" ref={balanceDropdownRef}>
-              {/* Balance Dropdown */}
+              {/* Balance Dropdown trigger */}
               <div className="relative">
                 <button
                   onClick={() => setShowBalanceDropdown(!showBalanceDropdown)}
                   className="bg-gray-700 hover:bg-gray-600 rounded px-3 py-1"
                 >
-                  {selectedCurrency === "BTC" && `${btcBalance.toFixed(8)} BTC`}
-                  {selectedCurrency === "SOL" && `${solBalance.toFixed(8)} SOL`}
+                  {/* reset animacije, ko menjaš valuto */}
+                  <BalanceTicker key={shownCurrency} value={shownBalance} currency={shownCurrency} />
                 </button>
 
                 {showBalanceDropdown && (
-                  <div className="absolute left-1/2 -translate-x-1/2 mt-2 w-64 bg-white text-black rounded shadow-lg p-4 z-50">
-                    <h2 className="text-sm font-semibold text-gray-700 mb-2">Your Balances</h2>
-                    <div className="space-y-2 text-sm">
+                  <div className="absolute left-1/2 -translate-x-1/2 mt-2 w-72 bg-white text-black rounded shadow-lg p-4 z-50">
+                    <h2 className="text-sm font-semibold text-gray-700 mb-3">Your Balances</h2>
+                    <div className="space-y-3 text-sm">
                       {/* BTC row */}
-                      {btcBalance > 0 && (
-                        <div
-                          className="flex justify-between items-center hover:bg-gray-200 px-2 py-1 rounded cursor-pointer"
-                          onClick={() => {
-                            setSelectedCurrency("BTC");
-                            setShowBalanceDropdown(false);
-                          }}
-                        >
+                      <div
+                        className="rounded p-2 hover:bg-gray-100 cursor-pointer"
+                        onClick={() => { setSelectedCurrency("BTC"); setShowBalanceDropdown(false); }}
+                      >
+                        <div className="flex items-center justify-between">
                           <div className="flex gap-2 items-center">
                             <img src="https://s2.coinmarketcap.com/static/img/coins/32x32/1.png" alt="BTC" className="w-5 h-5" />
-                            <span>BTC</span>
+                            <span className="font-medium">BTC</span>
                           </div>
-                          <div className="text-right">
-                            <div className="">{btcBalance.toFixed(8)}</div>
-                            <div className="text-xs text-gray-500">${(btcBalance * btcPrice).toFixed(2)} USDT</div>
-                          </div>
+                          <div className="text-right">{btcBalance.toFixed(8)}</div>
                         </div>
-                      )}
+                        <div className="text-right mt-1 text-xs text-gray-500">
+                          ${(btcBalance * btcPrice).toFixed(2)} USDT
+                        </div>
+                      </div>
 
                       {/* SOL row */}
-                      {solBalance > 0 && (
-                        <div
-                          className="flex justify-between items-center hover:bg-gray-200 px-2 py-1 rounded cursor-pointer"
-                          onClick={() => {
-                            setSelectedCurrency("SOL");
-                            setShowBalanceDropdown(false);
-                          }}
-                        >
+                      <div
+                        className="rounded p-2 hover:bg-gray-100 cursor-pointer"
+                        onClick={() => { setSelectedCurrency("SOL"); setShowBalanceDropdown(false); }}
+                      >
+                        <div className="flex items-center justify-between">
                           <div className="flex gap-2 items-center">
                             <img src="https://s2.coinmarketcap.com/static/img/coins/32x32/5426.png" alt="SOL" className="w-5 h-5" />
-                            <span>SOL</span>
+                            <span className="font-medium">SOL</span>
                           </div>
-                          <div className="text-right">
-                            <div className="">{solBalance.toFixed(8)}</div>
-                            <div className="text-xs text-gray-500">${(solBalance * solPrice).toFixed(2)} USDT</div>
-                          </div>
+                          <div className="text-right">{solBalance.toFixed(8)}</div>
                         </div>
-                      )}
-
-                      {btcBalance <= 0 && solBalance <= 0 && (
-                        <div className="flex flex-col items-center text-center text-gray-500 space-y-2">
-                          <img
-                            src="https://s2.coinmarketcap.com/static/cloud/img/loyalty-program/diamond-icon.svg"
-                            alt="Empty"
-                            className="w-8 h-8 mx-auto"
-                          />
-                          <div>Your wallet is empty.</div>
-                          <button
-                            onClick={() => {
-                              setShowBalanceDropdown(false);
-                              onWalletClick();
-                            }}
-                            className="mt-2 bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-1 rounded"
-                          >
-                            Wallet
-                          </button>
+                        <div className="text-right mt-1 text-xs text-gray-500">
+                          ${(solBalance * solPrice).toFixed(2)} USDT
                         </div>
-                      )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -197,10 +185,7 @@ export default function Topbar({
                 <div className="relative" ref={notificationsRef}>
                   <button
                     title="Notifications"
-                    onClick={() => {
-                      setShowNotifications(!showNotifications);
-                      setShowUserMenu(false);
-                    }}
+                    onClick={() => { setShowNotifications(!showNotifications); setShowUserMenu(false); }}
                     className="flex items-center justify-center text-xl leading-none hover:text-yellow-400"
                   >
                     <FaBell className="align-middle" />
@@ -228,10 +213,7 @@ export default function Topbar({
                 <div className="relative" ref={userMenuRef}>
                   <button
                     title="User"
-                    onClick={() => {
-                      setShowUserMenu(!showUserMenu);
-                      setShowNotifications(false);
-                    }}
+                    onClick={() => { setShowUserMenu(!showUserMenu); setShowNotifications(false); }}
                     className="flex items-center justify-center text-xl leading-none hover:text-blue-400"
                   >
                     <FaUserCircle className="align-middle" />
@@ -250,20 +232,15 @@ export default function Topbar({
                         { icon: <FaLightbulb />, label: "Stake Smart" },
                         { icon: <FaHeadset />, label: "Live Support" },
                       ].map(({ icon, label }) => (
-                        <div
-                          key={label}
-                          className="flex items-center px-4 py-2 hover:bg-gray-100 cursor-pointer space-x-2"
-                        >
-                          {icon}
-                          <span>{label}</span>
+                        <div key={label} className="flex items-center px-4 py-2 hover:bg-gray-100 cursor-pointer space-x-2">
+                          {icon}<span>{label}</span>
                         </div>
                       ))}
                       <div
                         onClick={handleLogout}
                         className="flex items-center px-4 py-2 hover:bg-gray-100 cursor-pointer space-x-2 text-red-500"
                       >
-                        <FaSignOutAlt />
-                        <span>Logout</span>
+                        <FaSignOutAlt /><span>Logout</span>
                       </div>
                     </div>
                   )}

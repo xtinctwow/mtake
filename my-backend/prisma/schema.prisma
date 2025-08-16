@@ -26,6 +26,7 @@ model User {
   BlackjackRound BlackjackRound[]
   BaccaratRound  BaccaratRound[]
   OAuthAccount   OAuthAccount[]
+  PlinkoRound    PlinkoRound[]
 }
 
 model Transaction {
@@ -171,4 +172,24 @@ model OAuthAccount {
   userId     Int
   user       User     @relation(fields: [userId], references: [id])
   createdAt  DateTime @default(now())
+}
+
+model PlinkoRound {
+  id     String @id @default(cuid())
+  userId Int?
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  bet            Float
+  currency       String
+  clientSeed     String
+  nonce          Int
+  serverSeed     String
+  serverSeedHash String
+
+  params    Json?
+  state     Json?
+  createdAt DateTime @default(now())
+
+  @@unique([userId, clientSeed, nonce])
+  @@index([userId, clientSeed, createdAt])
 }

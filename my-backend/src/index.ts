@@ -15,6 +15,7 @@ import blackjackRoutes from "./routes/blackjack";
 import baccaratRoutes from "./routes/baccarat";
 import { authenticateToken } from "./middleware/auth";
 import { startPriceUpdater } from "./cron/updatePrices";
+import plinkoRouter from "./routes/plinko";
 
 dotenv.config();
 
@@ -62,6 +63,7 @@ app.use("/api/mines", authenticateToken, minesRoutes);
 app.use("/api/limbo", authenticateToken, limboRoutes);   
 app.use("/api/blackjack", authenticateToken, blackjackRoutes); 
 app.use("/api/baccarat", authenticateToken, baccaratRoutes); 
+app.use("/api/plinko", authenticateToken, plinkoRouter);
 
 // Cron job
 startPriceUpdater();
